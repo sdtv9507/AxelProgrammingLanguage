@@ -3,6 +3,7 @@ use std::io::Write;
 use std::env;
 mod lexer;
 mod tokens;
+mod parser;
 
 fn main() {
     println!("Axel version 0.1.0");
@@ -21,11 +22,7 @@ fn main() {
             break;
         }else{
             let token = lexer::get_keywords(&input);
-            //for next_char in input.chars() {
-            //    if next_char != ' ' && next_char != '\n' && next_char != '\r'{
-            //        let token = lexer::test_next_token(&next_char);
-            //    }
-            //}
+            parser::parse_line(&token);
         }
     }
 }

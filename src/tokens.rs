@@ -1,13 +1,17 @@
 pub enum TokenTypes {
-    Operator(String),
+    Operator(char),
+    Identifier(String),
     Keywords(Keywords),
-    Strings(String),
     Numbers(i32),
+    Comment,
+    Break,
+    EndOfLine,
     Unknown,
     Illegal,
 }
 
 pub enum Keywords {
-    Let(String),
-    If(String),
+    Let,
+    Const,
+    If,
 }
