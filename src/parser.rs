@@ -1,17 +1,21 @@
 use crate::tokens;
 
 pub fn parse_line(line: &Vec<tokens::TokenTypes>) {
-    match line[0] {
+    match &line[0] {
         tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
             println!("if parsed");
         }
 
-        tokens::TokenTypes::Keywords(tokens::Keywords::Let) => {
-            parse_let();
+        tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
+            parse_variable();
         }
         
         tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
-            parse_let();
+            parse_variable();
+        }
+
+        tokens::TokenTypes::Identifier(s) => {
+            println!("identifier: {}", s);
         }
 
         tokens::TokenTypes::Comment => {
@@ -23,8 +27,8 @@ pub fn parse_line(line: &Vec<tokens::TokenTypes>) {
     }
 }
 
-pub fn parse_let() {
-    println!("Parsing Let!!!");
+pub fn parse_variable() {
+    println!("Parsing a Variable!!!");
 }
 
 pub fn parse_expression(line: &Vec<tokens::TokenTypes>) {
@@ -35,7 +39,7 @@ pub fn parse_expression(line: &Vec<tokens::TokenTypes>) {
     let mut num_vector_index = 0;
     loop {
         match &line[index] {
-            tokens::TokenTypes::Numbers(s) => {
+            tokens::TokenTypes::NumbersInt(s) => {
                 num_vector.insert(num_vector_index, s);
                 num_vector_index += 1;
             }
@@ -62,7 +66,9 @@ fn operate(numbers_vector: &Vec<&i32>, operators: &Vec<&char>) {
     let mut operations: usize = 0;
     let mut final_value = 0;
     let mut n = 0;
-    if operators.len() == 1 {
+    if operators.len() == 0 {
+        final_value = 0;
+    }else if operators.len() == 1 {
         let number1 = numbers_vector[operations];
         let number2 = &numbers_vector[&operations + 1];
         match operators[operations] {
@@ -70,7 +76,7 @@ fn operate(numbers_vector: &Vec<&i32>, operators: &Vec<&char>) {
                 n = add(number1, number2);
             },
             '-' => {
-                n = minus(number2, number2);
+                n = minus(number1, number2);
             },
             _ => println!("Error"),
         }

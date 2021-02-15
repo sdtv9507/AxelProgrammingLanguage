@@ -1,69 +1,115 @@
 use crate::tokens;
 
-pub fn get_keywords(text: &String) -> Vec<tokens::TokenTypes> {
-    let mut words = Vec::new();
-    let mut min_index = 0;
+pub fn get_keywords(read_text: &String) -> Vec<tokens::TokenTypes> {
+    let text_vec: Vec<char> = read_text.chars().collect();
+    /*for i in text_vec {
+        println!("{}", i);
+    }*/
+    let final_vector = read_token(&text_vec);
+    final_vector
+}
+
+fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
     let mut index = 0;
-    let mut element = 0;
     let mut token_vector = Vec::new();
-    let mut vector_index = 0;
-    for chr in text.chars() {
-        index += 1;
-        if chr.is_whitespace() || chr == '\n' {
-            if chr != '\n' {
-                words.insert(element, &text[min_index..index-1]);
-                min_index = index;
-                element += 1;
-            }
+    loop {
+        let mut chr = text_vec[index];
+        while is_ignored(chr) {
+            index += 1;
+            chr = text_vec[index];
         }
-    }
-
-    for element in words {
-        match element {
-            "if" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Keywords(tokens::Keywords::If));
+        match chr {
+            '+' => {
+                println!("+");
+                token_vector.push(tokens::TokenTypes::Operator('+'));
+            }
+            '-' => {
+                println!("-");
+                token_vector.push(tokens::TokenTypes::Operator('-'));
+            }
+            '=' => {
+                println!("=");
+                token_vector.push(tokens::TokenTypes::Operator('='));
+            }
+            '*' => {
+                println!("*");
+                token_vector.push(tokens::TokenTypes::Operator('*'));
+            }
+            '/' => {
+                println!("/");
+                token_vector.push(tokens::TokenTypes::Operator('/'));
+            }
+            '(' => {
+                println!("(");
+                token_vector.push(tokens::TokenTypes::Operator('('));
+            }
+            ')' => {
+                println!(")");
+                token_vector.push(tokens::TokenTypes::Operator(')'));
+            }
+            '#' => {
+                println!("comment");
+                token_vector.push(tokens::TokenTypes::Comment);
             }
 
-            "let" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Keywords(tokens::Keywords::Let));
+            '\n' => {
+                break;
             }
-
-            "+" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Operator('+'));
-            }
-            "-" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Operator('-'));
-            }
-            "=" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Operator('='));
-            }
-            "*" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Operator('*'));
-            },
-            "/" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Operator('/'));
-            },
-            "//" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::Comment);
-            },
-
-            "\n" => {
-                token_vector.insert(vector_index, tokens::TokenTypes::EndOfLine);
-            },
 
             _ => {
-                let text_data = element.chars().nth(0).unwrap();
-                if text_data.is_digit(10) {
-                    let int_converted: i32 = element.parse().unwrap();
-                    token_vector.insert(vector_index, tokens::TokenTypes::Numbers(int_converted));
-                }else if text_data.is_ascii_alphabetic() || text_data == '_' {
-                    token_vector.insert(vector_index, tokens::TokenTypes::Identifier(element.to_string()));
-                }else {
-                    token_vector.insert(vector_index, tokens::TokenTypes::Illegal);
+                if is_valid_number(chr) == true {
+                    let mut final_index = index;
+                    while is_valid_number(chr) == true {
+                        final_index += 1;
+                        chr = text_vec[final_index];
+                    }
+                    let identifier: &str = &text_vec[index..final_index].iter().collect::<String>();
+                    let int_identifier = identifier.parse().unwrap();
+                    token_vector.push(tokens::TokenTypes::NumbersInt(int_identifier));
+                    index = final_index - 1;
+                }else if is_valid_identifier(chr) == true {
+                    let mut final_index = index;
+                    while is_valid_identifier(chr) == true {
+                        final_index += 1;
+                        chr = text_vec[final_index];
+                    }
+                    let identifier: &str = &text_vec[index..final_index].iter().collect::<String>();
+                    match identifier {
+                        "if" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::If));
+                        }
+                        
+                        "var" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Var));
+                        }
+                        
+                        "const" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Const));
+                        }
+                        _ => {
+                            token_vector.push(tokens::TokenTypes::Identifier(identifier.to_string()));
+                        }
+                    }
+                    index = final_index - 1;
+                } else {
+                    println!("{}", chr);
+                    token_vector.push(tokens::TokenTypes::Illegal);
                 }
             }
         }
-        vector_index += 1;
+        index += 1;
     }
     token_vector
+}
+
+fn is_ignored(chr: char) -> bool {
+    chr == ' ' || chr == '\r'
+}
+
+fn is_valid_number(chr: char) -> bool {
+    '0' <= chr && chr <= '9'
+}
+
+fn is_valid_identifier(chr: char) -> bool {
+    'a' <= chr && chr <= 'z' || 'A' <= chr && chr <= 'Z' || chr == '_'
 }
