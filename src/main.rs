@@ -5,6 +5,8 @@ mod lexer;
 mod tokens;
 mod parser;
 
+use crate::parser::Parser;
+
 fn main() {
     println!("Axel version 0.1.0");
     println!("OS: {}", env::consts::OS);
@@ -13,7 +15,11 @@ fn main() {
 
     loop {
         input.clear();
-        print!("axel>>>>");
+        let path = get_path();
+        let path = match path {
+            Ok(path) => path,
+            Err(error) => panic!("Problem getting path: {:?}", error),
+        };
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut input).expect("Failed to read line");
         let compare_input: String = input.trim_end_matches("\r\n").to_string();
@@ -22,7 +28,14 @@ fn main() {
             break;
         }else{
             let token = lexer::get_keywords(&input);
-            parser::parse_line(&token);
+            let mut parser = Parser::new(token);
+            parser.parse_line();
         }
     }
+}
+
+fn get_path() -> std::io::Result<()>{
+    let current_path = env::current_dir()?;
+    print!("{}>>axel>", current_path.display());
+    Ok(())
 }
