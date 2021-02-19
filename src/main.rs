@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, path::PathBuf};
 use std::io::Write;
 use std::env;
 mod lexer;
@@ -20,6 +20,8 @@ fn main() {
             Ok(path) => path,
             Err(error) => panic!("Problem getting path: {:?}", error),
         };
+        println!("Path: {}", path.display());
+        print!("axel>>");
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut input).expect("Failed to read line");
         let compare_input: String = input.trim_end_matches("\r\n").to_string();
@@ -34,8 +36,7 @@ fn main() {
     }
 }
 
-fn get_path() -> std::io::Result<()>{
+fn get_path() -> std::io::Result<PathBuf>{
     let current_path = env::current_dir()?;
-    print!("{}>>axel>", current_path.display());
-    Ok(())
+    Ok(current_path)
 }
