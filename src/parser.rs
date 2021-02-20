@@ -19,6 +19,19 @@ struct Identifier {
     value: String,
 }
 
+pub enum Expresion {
+    InfixOp {
+        left: Box<Expresion>,
+        operator: tokens::TokenTypes,
+        right: Box<Expresion>,
+    },
+    
+    Prefix {
+        operator: tokens::TokenTypes,
+        right: Box<Expresion>,
+    },
+
+}
 impl Parser {
     pub fn new(line: Vec<tokens::TokenTypes>) -> Self {
         Parser {
@@ -264,5 +277,15 @@ impl Parser {
 
     fn divide(num1: &i32, num2: &i32) -> i32 {
         num1 / num2
+    }
+
+    fn get_precedence(token: tokens::TokenTypes) -> i32 {
+        match token {
+            tokens::TokenTypes::Operator('+') => 1,
+            tokens::TokenTypes::Operator('-') => 1,
+            tokens::TokenTypes::Operator('*') => 2,
+            tokens::TokenTypes::Operator('/') => 2,
+            _ => -1,
+        }
     }
 }

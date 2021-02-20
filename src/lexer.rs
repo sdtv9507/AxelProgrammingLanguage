@@ -56,6 +56,24 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 println!("semicolon");
                 token_vector.push(tokens::TokenTypes::Semicolon);
             }
+            '"' => {
+                let mut final_index = index;
+                final_index += 1;
+                chr = text_vec[final_index];
+                loop {
+                    final_index += 1;
+                    chr = text_vec[final_index];
+                    if chr == '"' {
+                        final_index += 1;
+                        break;
+                    }
+                }
+                let string = &text_vec[index..final_index].iter().collect::<String>().to_string();
+                let final_string = string.parse().unwrap();
+                println!("string: {0}, {1}, {2}", final_string, index, final_index);
+                token_vector.push(tokens::TokenTypes::Strings(final_string));
+                index = final_index - 1;
+            }
 			'\x00' => {
                 println!("end of line");
 				token_vector.push(tokens::TokenTypes::EndOfLine);
