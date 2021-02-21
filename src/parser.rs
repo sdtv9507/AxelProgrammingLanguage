@@ -19,7 +19,12 @@ struct Identifier {
     value: String,
 }
 
+#[derive(Clone)]
 pub enum Expresion {
+    NumberLit {
+        number: i32,
+    },
+
     InfixOp {
         left: Box<Expresion>,
         operator: tokens::TokenTypes,
@@ -63,7 +68,20 @@ impl Parser {
                 println!("This is a comment: Line ignored");
             }
             _ => {
-                Parser::parse_expression(&self.token_vector);
+                let number;
+                let mut precedence = 0;
+                match self.token_vector[self.current_token] {
+                    tokens::TokenTypes::NumbersInt(s) => number = s,
+                    _ => number = 0,
+                }
+                let mut left_op = Expresion::NumberLit {
+                    number: number,
+                };
+                while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
+                    left_op = self.expression_parser(precedence, left_op);
+                    precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
+                }
+                //Parser::parse_expression(&self.token_vector);
             }
         }
     }
@@ -186,6 +204,34 @@ impl Parser {
         self.advance_tokens();
     }
 
+    fn expression_parser(&mut self, precedence: usize, left_op: Expresion) -> Expresion {
+        let op;
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
+            _ => op = tokens::TokenTypes::Operator('-'),
+        }
+        self.advance_tokens();
+        let next_precedence: usize = Parser::get_precedence(&self.token_vector[self.current_token]);
+        let mut right_op;
+        let num;
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => num = s,
+            _ => num = 0,
+        };
+        right_op = Expresion::NumberLit {
+            number: num,
+        };
+        self.advance_tokens();
+        if precedence < next_precedence {
+            right_op = self.expression_parser(next_precedence, right_op);
+        }
+        Expresion::InfixOp {
+            left: Box::new(left_op.clone()),
+            operator: op,
+            right: Box::new(right_op.clone()),
+        }
+    }
+
     fn parse_expression(line: &Vec<tokens::TokenTypes>) {
         let mut index = 0;
         let mut operation: Vec<&char> = Vec::new();
@@ -279,13 +325,13 @@ impl Parser {
         num1 / num2
     }
 
-    fn get_precedence(token: tokens::TokenTypes) -> i32 {
+    fn get_precedence(token: &tokens::TokenTypes) -> usize {
         match token {
             tokens::TokenTypes::Operator('+') => 1,
             tokens::TokenTypes::Operator('-') => 1,
             tokens::TokenTypes::Operator('*') => 2,
             tokens::TokenTypes::Operator('/') => 2,
-            _ => -1,
+            _ => 0,
         }
     }
 }

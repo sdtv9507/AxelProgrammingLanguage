@@ -1,5 +1,5 @@
 use std::fmt;
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenTypes {
     Operator(char),
     Identifier(String),
@@ -11,7 +11,7 @@ pub enum TokenTypes {
 	EndOfLine,
     Illegal,
 }
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Keywords {
     Var,
     Const,

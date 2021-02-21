@@ -59,7 +59,6 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
             '"' => {
                 let mut final_index = index;
                 final_index += 1;
-                chr = text_vec[final_index];
                 loop {
                     final_index += 1;
                     chr = text_vec[final_index];
