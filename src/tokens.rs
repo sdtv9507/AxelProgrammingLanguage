@@ -16,6 +16,7 @@ pub enum Keywords {
     Var,
     Const,
     If,
+    Return,
 }
 
 impl fmt::Display for TokenTypes {
@@ -40,6 +41,7 @@ impl fmt::Display for Keywords {
             Keywords::Var => write!(f, "Variable declaration"),
             Keywords::Const => write!(f, "Constant declaration"),
             Keywords::If => write!(f, "If statement"),
+            Keywords::Return => write!(f, "Return statement"),
         }
     }
 }

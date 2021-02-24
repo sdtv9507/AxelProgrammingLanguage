@@ -19,6 +19,10 @@ struct Identifier {
     value: String,
 }
 
+struct ReturnStatement {
+    value: String
+}
+
 #[derive(Clone)]
 pub enum Expresion {
     NumberLit {
@@ -30,12 +34,10 @@ pub enum Expresion {
         operator: tokens::TokenTypes,
         right: Box<Expresion>,
     },
-    
     Prefix {
         operator: tokens::TokenTypes,
         right: Box<Expresion>,
     },
-
 }
 impl Parser {
     pub fn new(line: Vec<tokens::TokenTypes>) -> Self {
@@ -53,11 +55,17 @@ impl Parser {
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
-                self.parse_variable();
+                let variable_statement = self.parse_variable();
+                println!("token: {0}, name: {1}, value: {1}", variable_statement.token, variable_statement.value);
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
                 self.parse_constant();
+            }
+
+            tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
+                let return_statement = self.parse_return();
+                println!("{}", return_statement.value);
             }
 
             tokens::TokenTypes::Identifier(s) => {
@@ -74,9 +82,7 @@ impl Parser {
                     tokens::TokenTypes::NumbersInt(s) => number = s,
                     _ => number = 0,
                 }
-                let mut left_op = Expresion::NumberLit {
-                    number: number,
-                };
+                let mut left_op = Expresion::NumberLit { number: number };
                 while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
                     left_op = self.expression_parser(precedence, left_op);
                     precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -91,6 +97,34 @@ impl Parser {
         self.next_token += 1;
     }
 
+    fn parse_return(&mut self) -> ReturnStatement {
+        if &self.token_vector.len() <= &self.next_token {
+            println!("error, expected an expression");
+            return 
+            ReturnStatement {
+                value: "error".to_string(),
+            }
+        }
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
+            self.advance_tokens();
+            if self.token_vector.len() == self.next_token {
+                println!("error, expected an expression");
+                return 
+                ReturnStatement {
+                    value: "error".to_string(),
+                }
+            }
+            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
+                println!("error, expected an expression");
+                return ReturnStatement {
+                    value: "error".to_string(),
+                }
+            }
+        }
+        ReturnStatement {
+            value: "string".to_string(),
+        }
+    }
     fn parse_variable(&mut self) -> VarStatement {
         let token: tokens::TokenTypes;
         let identifier: Identifier;
@@ -107,7 +141,7 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
             _ => {
                 println!("error, expected an identifier");
@@ -118,12 +152,10 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
         }
-        
         self.advance_tokens();
-        
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Operator('=') => {
                 identifier = Identifier {
@@ -140,7 +172,7 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
             _ => {
                 println!("error, expected = sign");
@@ -151,12 +183,10 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
         }
-        
         self.advance_tokens();
-        
         if &self.token_vector.len() <= &self.next_token {
             println!("error, expected an expression");
             return VarStatement {
@@ -166,7 +196,7 @@ impl Parser {
                     value: "<error>".to_string(),
                 },
                 value: "error".to_string(),
-            }
+            };
         }
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             self.advance_tokens();
@@ -179,7 +209,7 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 println!("error, expected an expression");
@@ -190,7 +220,7 @@ impl Parser {
                         value: "<error>".to_string(),
                     },
                     value: "error".to_string(),
-                }
+                };
             }
         }
         VarStatement {
@@ -218,9 +248,7 @@ impl Parser {
             tokens::TokenTypes::NumbersInt(s) => num = s,
             _ => num = 0,
         };
-        right_op = Expresion::NumberLit {
-            number: num,
-        };
+        right_op = Expresion::NumberLit { number: num };
         self.advance_tokens();
         if precedence < next_precedence {
             right_op = self.expression_parser(next_precedence, right_op);

@@ -114,6 +114,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         "const" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Const));
                         }
+
+                        "return" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Return));
+                        }
                         _ => {
                             token_vector.push(tokens::TokenTypes::Identifier(identifier.to_string()));
                         }
