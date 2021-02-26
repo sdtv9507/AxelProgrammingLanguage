@@ -29,6 +29,10 @@ pub enum Expresion {
         number: i32,
     },
 
+    BoolExp {
+        value: bool,
+    },
+    
     InfixOp {
         left: Box<Expresion>,
         operator: tokens::TokenTypes,
@@ -60,7 +64,7 @@ impl Parser {
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
-                self.parse_constant();
+                let const_statement = self.parse_constant();
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
@@ -257,6 +261,13 @@ impl Parser {
             left: Box::new(left_op.clone()),
             operator: op,
             right: Box::new(right_op.clone()),
+        }
+    }
+
+    fn parse_boolean(&mut self) -> Expresion {
+        let boolean = self.token_vector[self.current_token] == tokens::TokenTypes::Keywords(tokens::Keywords::True);
+        Expresion::BoolExp {
+            value: boolean,
         }
     }
 

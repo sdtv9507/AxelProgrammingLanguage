@@ -118,6 +118,14 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         "return" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Return));
                         }
+
+                        "true" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::True));
+                        }
+
+                        "false" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::False));
+                        }
                         _ => {
                             token_vector.push(tokens::TokenTypes::Identifier(identifier.to_string()));
                         }
