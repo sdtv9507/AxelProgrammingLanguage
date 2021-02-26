@@ -80,20 +80,26 @@ impl Parser {
                 println!("This is a comment: Line ignored");
             }
             _ => {
-                let number;
-                let mut precedence = 0;
-                match self.token_vector[self.current_token] {
-                    tokens::TokenTypes::NumbersInt(s) => number = s,
-                    _ => number = 0,
-                }
-                let mut left_op = Expresion::NumberLit { number: number };
-                while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
-                    left_op = self.expression_parser(precedence, left_op);
-                    precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
-                }
+                self.expression_parser();
                 //Parser::parse_expression(&self.token_vector);
             }
         }
+    }
+
+    fn expression_parser(&mut self) -> Expresion {
+        let number;
+        let mut precedence = 0;
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => number = s,
+            _ => number = 0,
+        }
+        let mut left_op = Expresion::NumberLit { number: number };
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
+            left_op = self.infix_expression_parser(precedence, left_op);
+            precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
+        }
+
+        left_op
     }
 
     fn advance_tokens(&mut self) {
@@ -129,6 +135,7 @@ impl Parser {
             value: "string".to_string(),
         }
     }
+
     fn parse_variable(&mut self) -> VarStatement {
         let token: tokens::TokenTypes;
         let identifier: Identifier;
@@ -238,7 +245,7 @@ impl Parser {
         self.advance_tokens();
     }
 
-    fn expression_parser(&mut self, precedence: usize, left_op: Expresion) -> Expresion {
+    fn infix_expression_parser(&mut self, precedence: usize, left_op: Expresion) -> Expresion {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
@@ -255,7 +262,7 @@ impl Parser {
         right_op = Expresion::NumberLit { number: num };
         self.advance_tokens();
         if precedence < next_precedence {
-            right_op = self.expression_parser(next_precedence, right_op);
+            right_op = self.infix_expression_parser(next_precedence, right_op);
         }
         Expresion::InfixOp {
             left: Box::new(left_op.clone()),
@@ -269,6 +276,23 @@ impl Parser {
         Expresion::BoolExp {
             value: boolean,
         }
+    }
+
+    fn parse_grouped_expression(&mut self) -> Expresion {
+        self.advance_tokens();
+        let number;
+        let mut precedence = 0;
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => number = s,
+            _ => number = 0,
+        }
+        let mut left_op = Expresion::NumberLit { number: number };
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
+            left_op = self.infix_expression_parser(precedence, left_op);
+            precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
+        }
+
+        left_op
     }
 
     fn parse_expression(line: &Vec<tokens::TokenTypes>) {
