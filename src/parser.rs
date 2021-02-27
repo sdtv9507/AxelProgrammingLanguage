@@ -8,23 +8,22 @@ pub struct Parser {
     next_token: usize,
 }
 
-struct VarStatement {
-    token: tokens::TokenTypes,
-    name: Identifier,
-    value: String,
-}
-
-struct Identifier {
-    identifier: tokens::TokenTypes,
-    value: String,
-}
-
-struct ReturnStatement {
-    value: String
+#[derive(Clone)]
+pub enum Statement {
+    VarStatement {
+        token: tokens::TokenTypes,
+        name: String,
+        value: String,
+    },
+    
+    ReturnStatement {
+        value: String,
+    },
+    
 }
 
 #[derive(Clone)]
-pub enum Expresion {
+pub enum Expression {
     NumberLit {
         number: i32,
     },
@@ -33,14 +32,20 @@ pub enum Expresion {
         value: bool,
     },
     
+    IfExpr {
+        condition: Box<Expression>,
+        then: Option<Box<Statement>>,
+        other: Option<Box<Statement>>,
+    },
+
     InfixOp {
-        left: Box<Expresion>,
+        left: Box<Expression>,
         operator: tokens::TokenTypes,
-        right: Box<Expresion>,
+        right: Box<Expression>,
     },
     Prefix {
         operator: tokens::TokenTypes,
-        right: Box<Expresion>,
+        right: Box<Expression>,
     },
 }
 impl Parser {
@@ -55,12 +60,12 @@ impl Parser {
     pub fn parse_line(&mut self) {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
-                println!("if parsed");
+                self.parse_if();
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
                 let variable_statement = self.parse_variable();
-                println!("token: {0}, name: {1}, value: {1}", variable_statement.token, variable_statement.value);
+                //println!("token: {0}, name: {1}, value: {1}", variable_statement.token, variable_statement.value);
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
@@ -69,7 +74,7 @@ impl Parser {
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
                 let return_statement = self.parse_return();
-                println!("{}", return_statement.value);
+                //println!("{}", return_statement.value);
             }
 
             tokens::TokenTypes::Identifier(s) => {
@@ -86,20 +91,61 @@ impl Parser {
         }
     }
 
-    fn expression_parser(&mut self) -> Expresion {
+    fn parse_if(&mut self) -> Result<Expression, String> {
+        if self.match_operator('(') == false {
+            return Err("Error, expected (".to_string());
+        }
+        self.advance_tokens();
+
+        let condition_result = self.expression_parser();
+        let condition;
+        match condition_result {
+            Ok(v) => condition = Box::new(v),
+            _ => return Err("error".to_string()),
+        }
+        
+        if self.match_operator(')') == false {
+            return Err("Error, expected )".to_string());
+        }
+
+        Ok(Expression::IfExpr {
+            condition: condition,
+            then: None,
+            other: None,
+        })
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement, String> {
+        self.advance_tokens();
+        let statement = Statement::ReturnStatement {
+            value: "".to_string(),
+        };
+
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
+            //statement = self.parse_line();
+            self.advance_tokens();
+        }
+
+        Ok(statement)
+    }
+    fn expression_parser(&mut self) -> Result<Expression, String> {
         let number;
         let mut precedence = 0;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => number = s,
             _ => number = 0,
         }
-        let mut left_op = Expresion::NumberLit { number: number };
+        let mut left_op = Expression::NumberLit { number: number };
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
-            left_op = self.infix_expression_parser(precedence, left_op);
+            let result_op = self.infix_expression_parser(precedence, left_op);
+            match result_op {
+                Ok(v) => left_op = v,
+                _ => return Err("error, expected a number".to_string()),
+            };
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
 
-        left_op
+        Ok(left_op)
     }
 
     fn advance_tokens(&mut self) {
@@ -107,149 +153,79 @@ impl Parser {
         self.next_token += 1;
     }
 
-    fn parse_return(&mut self) -> ReturnStatement {
+    fn parse_return(&mut self) -> Result<Statement, String> {
         if &self.token_vector.len() <= &self.next_token {
-            println!("error, expected an expression");
-            return 
-            ReturnStatement {
-                value: "error".to_string(),
-            }
+            return Err("error, expected an expression".to_string());
         }
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
-                println!("error, expected an expression");
-                return 
-                ReturnStatement {
-                    value: "error".to_string(),
-                }
+                return Err("error, expected an expression".to_string());
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                println!("error, expected an expression");
-                return ReturnStatement {
-                    value: "error".to_string(),
-                }
+                return Err("error, expected an expression".to_string());
             }
         }
-        ReturnStatement {
+        Ok(Statement::ReturnStatement {
             value: "string".to_string(),
-        }
+        })
     }
 
-    fn parse_variable(&mut self) -> VarStatement {
+    fn parse_variable(&mut self) -> Result<Statement, String> {
         let token: tokens::TokenTypes;
-        let identifier: Identifier;
+        let identifier: String;
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Identifier(s) => {
                 token = tokens::TokenTypes::Identifier(s.to_string());
             }
             tokens::TokenTypes::EndOfLine => {
-                println!("error, expected an identifier");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected an identifier".to_string());
             }
             _ => {
-                println!("error, expected an identifier");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected an identifier".to_string());
             }
         }
         self.advance_tokens();
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Operator('=') => {
-                identifier = Identifier {
-                    identifier: tokens::TokenTypes::Operator('='),
-                    value: "=".to_string(),
-                }
+                identifier = "=".to_string()
             }
             tokens::TokenTypes::EndOfLine => {
-                println!("error, expected = sign");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected = sign".to_string());
             }
             _ => {
-                println!("error, expected = sign");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected an identifier".to_string());
             }
         }
         self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {
-            println!("error, expected an expression");
-            return VarStatement {
-                token: tokens::TokenTypes::Illegal,
-                name: Identifier {
-                    identifier: tokens::TokenTypes::Illegal,
-                    value: "<error>".to_string(),
-                },
-                value: "error".to_string(),
-            };
+            return Err("error, expected an expression".to_string());
         }
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
-                println!("error, expected an expression");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected an expression".to_string());
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                println!("error, expected an expression");
-                return VarStatement {
-                    token: tokens::TokenTypes::Illegal,
-                    name: Identifier {
-                        identifier: tokens::TokenTypes::Illegal,
-                        value: "<error>".to_string(),
-                    },
-                    value: "error".to_string(),
-                };
+                return Err("error, expected an expression".to_string());
             }
         }
-        VarStatement {
+        Ok(Statement::VarStatement {
             token: token,
             name: identifier,
             value: "string".to_string(),
-        }
+        })
     }
 
     fn parse_constant(&mut self) {
         self.advance_tokens();
     }
 
-    fn infix_expression_parser(&mut self, precedence: usize, left_op: Expresion) -> Expresion {
+    fn infix_expression_parser(&mut self, precedence: usize, left_op: Expression) -> Result<Expression, String> {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
-            _ => op = tokens::TokenTypes::Operator('-'),
+            _ => return Err("error, expected an operator".to_string()),
         }
         self.advance_tokens();
         let next_precedence: usize = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -257,28 +233,32 @@ impl Parser {
         let num;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => num = s,
-            _ => num = 0,
+            _ => return Err("error, expected a number".to_string()),
         };
-        right_op = Expresion::NumberLit { number: num };
+        right_op = Expression::NumberLit { number: num };
         self.advance_tokens();
         if precedence < next_precedence {
-            right_op = self.infix_expression_parser(next_precedence, right_op);
+            let result_op = self.infix_expression_parser(next_precedence, right_op);
+            match result_op {
+                Ok(v) => right_op = v,
+                _ => return Err("error, expected a number".to_string()),
+            };
         }
-        Expresion::InfixOp {
+        Ok(Expression::InfixOp {
             left: Box::new(left_op.clone()),
             operator: op,
             right: Box::new(right_op.clone()),
-        }
+        })
     }
 
-    fn parse_boolean(&mut self) -> Expresion {
+    fn parse_boolean(&mut self) -> Expression {
         let boolean = self.token_vector[self.current_token] == tokens::TokenTypes::Keywords(tokens::Keywords::True);
-        Expresion::BoolExp {
+        Expression::BoolExp {
             value: boolean,
         }
     }
 
-    fn parse_grouped_expression(&mut self) -> Expresion {
+    fn parse_grouped_expression(&mut self) -> Result<Expression, String> {
         self.advance_tokens();
         let number;
         let mut precedence = 0;
@@ -286,13 +266,17 @@ impl Parser {
             tokens::TokenTypes::NumbersInt(s) => number = s,
             _ => number = 0,
         }
-        let mut left_op = Expresion::NumberLit { number: number };
+        let mut left_op = Expression::NumberLit { number: number };
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
-            left_op = self.infix_expression_parser(precedence, left_op);
+            let result_op = self.infix_expression_parser(precedence, left_op);
+            match result_op {
+                Ok(v) => left_op = v,
+                _ => return Err("error, expected a number".to_string()),
+            };
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
 
-        left_op
+        Ok(left_op)
     }
 
     fn parse_expression(line: &Vec<tokens::TokenTypes>) {
@@ -395,6 +379,13 @@ impl Parser {
             tokens::TokenTypes::Operator('*') => 2,
             tokens::TokenTypes::Operator('/') => 2,
             _ => 0,
+        }
+    }
+
+    fn match_operator(&mut self, token: char) -> bool {
+        match self.token_vector[self.next_token] {
+            tokens::TokenTypes::Operator(s) if s == token => true,
+            _ => false,
         }
     }
 }

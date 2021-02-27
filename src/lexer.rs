@@ -107,6 +107,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::If));
                         }
                         
+                        "else" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Else));
+                        }
+                        
                         "var" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Var));
                         }
