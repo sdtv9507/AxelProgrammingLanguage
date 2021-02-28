@@ -15,11 +15,10 @@ pub enum Statement {
         name: String,
         value: String,
     },
-    
+
     ReturnStatement {
         value: String,
     },
-    
 }
 
 #[derive(Clone)]
@@ -31,10 +30,10 @@ pub enum Expression {
     BoolExp {
         value: bool,
     },
-    
+
     IfExpr {
         condition: Box<Expression>,
-        then: Option<Box<Statement>>,
+        then: Box<Statement>,
         other: Option<Box<Statement>>,
     },
 
@@ -60,7 +59,7 @@ impl Parser {
     pub fn parse_line(&mut self) {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
-                self.parse_if();
+                let if_statement = self.parse_if();
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
@@ -103,15 +102,55 @@ impl Parser {
             Ok(v) => condition = Box::new(v),
             _ => return Err("error".to_string()),
         }
-        
+
         if self.match_operator(')') == false {
             return Err("Error, expected )".to_string());
         }
 
+        self.advance_tokens();
+
+        if self.match_delim('{') == false {
+            return Err("Error, expected {".to_string());
+        }
+
+        self.advance_tokens();
+        self.advance_tokens();
+
+        let consequence_result = self.parse_statement();
+        let consequence;
+
+        match consequence_result {
+            Ok(v) => consequence = Box::new(v),
+            _ => return Err("error".to_string()),
+        }
+
+        if self.match_delim('}') == false {
+            return Err("Error, expected }".to_string());
+        }
+
+        let then: Option<Box<Statement>>;
+        match self.token_vector[self.next_token] {
+            tokens::TokenTypes::Keywords(tokens::Keywords::Else) => {
+                let then_result = self.parse_statement();
+                let then_box;
+                match then_result {
+                    Ok(v) => then_box = Box::new(v),
+                    _ => return Err("error".to_string()),
+                }
+
+                if self.match_delim('}') == false {
+                    return Err("Error, expected }".to_string());
+                }
+                then = Some(then_box);
+            }
+            _ => {
+                then = None;
+            }
+        }
         Ok(Expression::IfExpr {
             condition: condition,
-            then: None,
-            other: None,
+            then: consequence,
+            other: then,
         })
     }
 
@@ -121,7 +160,7 @@ impl Parser {
             value: "".to_string(),
         };
 
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator('}') {
             //statement = self.parse_line();
             self.advance_tokens();
         }
@@ -187,9 +226,7 @@ impl Parser {
         }
         self.advance_tokens();
         match &self.token_vector[self.next_token] {
-            tokens::TokenTypes::Operator('=') => {
-                identifier = "=".to_string()
-            }
+            tokens::TokenTypes::Operator('=') => identifier = "=".to_string(),
             tokens::TokenTypes::EndOfLine => {
                 return Err("error, expected = sign".to_string());
             }
@@ -221,7 +258,11 @@ impl Parser {
         self.advance_tokens();
     }
 
-    fn infix_expression_parser(&mut self, precedence: usize, left_op: Expression) -> Result<Expression, String> {
+    fn infix_expression_parser(
+        &mut self,
+        precedence: usize,
+        left_op: Expression,
+    ) -> Result<Expression, String> {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
@@ -252,10 +293,9 @@ impl Parser {
     }
 
     fn parse_boolean(&mut self) -> Expression {
-        let boolean = self.token_vector[self.current_token] == tokens::TokenTypes::Keywords(tokens::Keywords::True);
-        Expression::BoolExp {
-            value: boolean,
-        }
+        let boolean = self.token_vector[self.current_token]
+            == tokens::TokenTypes::Keywords(tokens::Keywords::True);
+        Expression::BoolExp { value: boolean }
     }
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, String> {
@@ -385,6 +425,13 @@ impl Parser {
     fn match_operator(&mut self, token: char) -> bool {
         match self.token_vector[self.next_token] {
             tokens::TokenTypes::Operator(s) if s == token => true,
+            _ => false,
+        }
+    }
+
+    fn match_delim(&mut self, token: char) -> bool {
+        match self.token_vector[self.next_token] {
+            tokens::TokenTypes::Delim(s) if s == token => true,
             _ => false,
         }
     }

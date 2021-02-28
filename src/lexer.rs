@@ -48,6 +48,14 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 println!(")");
                 token_vector.push(tokens::TokenTypes::Operator(')'));
             }
+            '{' => {
+                println!("{{");
+                token_vector.push(tokens::TokenTypes::Delim('{'));
+            }
+            '}' => {
+                println!("}}");
+                token_vector.push(tokens::TokenTypes::Delim('}'));
+            }
             '#' => {
                 println!("comment");
                 token_vector.push(tokens::TokenTypes::Comment);
