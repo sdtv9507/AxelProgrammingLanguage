@@ -60,6 +60,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 println!("comment");
                 token_vector.push(tokens::TokenTypes::Comment);
             }
+            ',' => {
+                println!("comma");
+                token_vector.push(tokens::TokenTypes::Comma);
+            }
             ';' => {
                 println!("semicolon");
                 token_vector.push(tokens::TokenTypes::Semicolon);
@@ -129,6 +133,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
 
                         "return" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Return));
+                        }
+
+                        "fn" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Function));
                         }
 
                         "true" => {

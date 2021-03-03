@@ -7,6 +7,7 @@ pub enum TokenTypes {
     NumbersInt(i32),
     Strings(String),
     Delim(char),
+    Comma,
     Semicolon,
     Comment,
 	EndOfLine,
@@ -19,6 +20,7 @@ pub enum Keywords {
     If,
     Else,
     Return,
+    Function,
     True,
     False,
 }
@@ -32,6 +34,7 @@ impl fmt::Display for TokenTypes {
             TokenTypes::NumbersInt(s) => write!(f, "Number {}", s),
             TokenTypes::Strings(s) => write!(f, "String {}", s),
             TokenTypes::Delim(s) => write!(f, "Delim {}", s),
+            TokenTypes::Comma => write!(f, "Comma"),
             TokenTypes::Semicolon => write!(f, "Semicolon"),
             TokenTypes::Comment => write!(f, "Comment"),
             TokenTypes::EndOfLine => write!(f, "End of line"),
@@ -48,6 +51,7 @@ impl fmt::Display for Keywords {
             Keywords::If => write!(f, "If statement"),
             Keywords::Else => write!(f, "Else statement"),
             Keywords::Return => write!(f, "Return statement"),
+            Keywords::Function => write!(f, "Function statement"),
             Keywords::True => write!(f, "True statement"),
             Keywords::False => write!(f, "False statement"),
         }
