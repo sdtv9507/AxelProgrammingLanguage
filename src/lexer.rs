@@ -10,6 +10,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
     let mut index = 0;
     let mut token_vector = Vec::new();
     loop {
+        if index >= text_vec.len() {
+            token_vector.push(tokens::TokenTypes::EndOfLine);
+            break;
+        }
         let mut chr = text_vec[index];
         while is_ignored(chr) {
             index += 1;
@@ -73,13 +77,11 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 index = final_index - 1;
             }
 			'\x00' => {
-				token_vector.push(tokens::TokenTypes::EndOfLine);
-				break;
+                println!("final?");
 			}
-            '\n' => {
-				token_vector.push(tokens::TokenTypes::EndOfLine);
-                break;
-            }
+			'\n' => {
+                println!("line break?");
+			}
             _ => {
                 if is_valid_number(chr) == true {
                     let mut final_index = index;
@@ -136,6 +138,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                     }
                     index = final_index - 1;
                 } else {
+                    println!("{}", chr);
                     token_vector.push(tokens::TokenTypes::Illegal);
                 }
             }

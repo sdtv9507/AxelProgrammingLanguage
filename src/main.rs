@@ -27,15 +27,15 @@ fn main() {
             Err(e) => println!("Exit program with error: {}", e),
         }
     }
+    let path = get_path();
+    let path = match path {
+        Ok(path) => path,
+        Err(error) => panic!("Problem getting path: {:?}", error),
+    };
+    println!("Path: {}", path.display());
 
     loop {
         input.clear();
-        let path = get_path();
-        let path = match path {
-            Ok(path) => path,
-            Err(error) => panic!("Problem getting path: {:?}", error),
-        };
-        println!("Path: {}", path.display());
         print!("axel>>");
         io::stdout().flush().unwrap();
         io::stdin()

@@ -28,7 +28,7 @@ pub enum Statement {
 
     ExpressionStatement {
         value: Box<Expression>,
-    }
+    },
 }
 
 #[derive(Clone)]
@@ -58,6 +58,12 @@ pub enum Expression {
         operator: tokens::TokenTypes,
         right: Box<Expression>,
     },
+
+    CallExpr {
+        name: String,
+        expressions: Vec<Expression>,
+    },
+
     Prefix {
         operator: tokens::TokenTypes,
         right: Box<Expression>,
@@ -97,7 +103,7 @@ impl Parser {
                 }
             }
 
-            _ => { 
+            _ => {
                 let expression_statement = self.parse_expressions();
                 match expression_statement {
                     Ok(s) => {
@@ -115,34 +121,38 @@ impl Parser {
     pub fn parse_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
-                let if_statement = self.parse_if();
-                match if_statement {
+                let if_expression = self.parse_if();
+                match if_expression {
                     Ok(s) => return Ok(s),
                     Err(e) => return Err(e),
                 }
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Function) => {
-                let function_statement = self.parse_function();
-                match function_statement {
+                let function_expression = self.parse_function();
+                match function_expression {
                     Ok(s) => return Ok(s),
                     Err(e) => return Err(e),
                 }
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::True) => {
-                let true_statement = self.parse_boolean();
-                Ok(true_statement)
+                let true_expression = self.parse_boolean();
+                Ok(true_expression)
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
-                let false_statement = self.parse_boolean();
-                Ok(false_statement)
+                let false_expression = self.parse_boolean();
+                Ok(false_expression)
             }
 
-            //tokens::TokenTypes::Identifier(s) => {
-            //    println!("identifier: {}", s);
-            //}
+            tokens::TokenTypes::Identifier(s) => {
+                let call_expression = self.parse_call();
+                match call_expression {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
 
             //tokens::TokenTypes::Comment => {
             //    println!("This is a comment: Line ignored");
@@ -157,7 +167,45 @@ impl Parser {
         }
     }
 
-    fn parse_function<'a>(& mut self) -> Result<Expression, &'a str> {
+    fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
+        let name;
+        match &self.token_vector[self.current_token] {
+            tokens::TokenTypes::Identifier(s) => name = s.clone(),
+            _ => return Err("Error, expected an identifier"),
+        }
+
+        if self.match_operator('(') == false {
+            return Err("Error, expected (");
+        }
+
+        self.advance_tokens();
+        let mut expressions: Vec<Expression> = Vec::new();
+        while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
+            let number;
+            match self.token_vector[self.current_token] {
+                tokens::TokenTypes::NumbersInt(s) => number = s,
+                _ => number = 0,
+            }
+            let left_op = Expression::NumberLit { number: number };
+            let result_op = self.infix_expression_parser(0, left_op);
+            match result_op {
+                Ok(s) => expressions.push(s.clone()),
+                Err(e) => return Err(e),
+            }
+
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Comma {
+                self.advance_tokens();
+                self.advance_tokens();
+            }
+            println!("{}",self.token_vector[self.current_token]);
+            println!("{}",self.token_vector[self.next_token]);
+        }
+
+        println!("finish");
+        Ok(Expression::CallExpr { name, expressions })
+    }
+
+    fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
         let identifier: String;
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
@@ -179,7 +227,7 @@ impl Parser {
                 _ => return Err("Error, expected an identifier"),
             }
             self.advance_tokens();
-    
+
             if self.match_operator(')') == false {
                 match &self.token_vector[self.next_token] {
                     tokens::TokenTypes::Comma => self.advance_tokens(),
@@ -189,7 +237,7 @@ impl Parser {
         }
 
         self.advance_tokens();
-        
+
         if self.match_delim('{') == false {
             return Err("Error, expected {");
         }
@@ -307,7 +355,7 @@ impl Parser {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
-                _ => return Err("error, expected a number"),
+                Err(e) => return Err(e),
             };
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
@@ -382,7 +430,7 @@ impl Parser {
         })
     }
 
-    fn parse_constant<'a>(&mut self) -> Result<Statement, &'a str>{
+    fn parse_constant<'a>(&mut self) -> Result<Statement, &'a str> {
         let token: tokens::TokenTypes;
         let identifier: String;
         match &self.token_vector[self.next_token] {
@@ -434,25 +482,29 @@ impl Parser {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
-            _ => return Err("error, expected an operator"),
+            _ => return Err("expected an operator"),
         }
+
         self.advance_tokens();
         let next_precedence: usize = Parser::get_precedence(&self.token_vector[self.current_token]);
         let mut right_op;
         let num;
+
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => num = s,
-            _ => return Err("error, expected a number"),
+            _ => return Err("expected a value"),
         };
         right_op = Expression::NumberLit { number: num };
+
         self.advance_tokens();
-        if precedence < next_precedence {
+        if next_precedence > precedence {
             let result_op = self.infix_expression_parser(next_precedence, right_op);
             match result_op {
                 Ok(v) => right_op = v,
-                _ => return Err("error, expected a number"),
+                _ => right_op = Expression::NumberLit { number: num },
             };
         }
+
         Ok(Expression::InfixOp {
             left: Box::new(left_op.clone()),
             operator: op,
