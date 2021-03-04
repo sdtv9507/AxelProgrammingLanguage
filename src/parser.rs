@@ -37,6 +37,11 @@ pub enum Expression {
         other: Option<Box<Statement>>,
     },
 
+    FunctionExpr {
+        parameters: Vec<String>,
+        body: Box<Statement>,
+    },
+
     InfixOp {
         left: Box<Expression>,
         operator: tokens::TokenTypes,
@@ -71,6 +76,11 @@ impl Parser {
                 let const_statement = self.parse_constant();
             }
 
+            tokens::TokenTypes::Keywords(tokens::Keywords::Function) => {
+                let function_statement = self.parse_function();
+                //println!("{}", return_statement.value);
+            }
+
             tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
                 let return_statement = self.parse_return();
                 //println!("{}", return_statement.value);
@@ -90,9 +100,56 @@ impl Parser {
         }
     }
 
-    fn parse_if(&mut self) -> Result<Expression, String> {
+    fn parse_function<'a>(& mut self) -> Result<Expression, &'a str> {
         if self.match_operator('(') == false {
-            return Err("Error, expected (".to_string());
+            return Err("Error, expected (");
+        }
+        self.advance_tokens();
+
+        let mut parameters: Vec<String> = Vec::new();
+
+        while self.match_operator(')') == false {
+            match &self.token_vector[self.next_token] {
+                tokens::TokenTypes::Identifier(s) => parameters.push(s.clone()),
+                _ => return Err("Error, expected an identifier"),
+            }
+            self.advance_tokens();
+    
+            if self.match_operator(')') == false {
+                match &self.token_vector[self.next_token] {
+                    tokens::TokenTypes::Comma => self.advance_tokens(),
+                    _ => return Err("Error, expected an identifier"),
+                }
+            }
+        }
+
+        self.advance_tokens();
+        
+        if self.match_delim('{') == false {
+            return Err("Error, expected {");
+        }
+
+        let statement_result = self.parse_statement();
+        let statement;
+
+        match statement_result {
+            Ok(v) => statement = Box::new(v),
+            _ => return Err("error"),
+        }
+
+        if self.match_delim('}') == false {
+            return Err("Error, expected }");
+        }
+
+        Ok(Expression::FunctionExpr {
+            parameters: parameters,
+            body: statement,
+        })
+    }
+
+    fn parse_if<'a>(&mut self) -> Result<Expression, &'a str> {
+        if self.match_operator('(') == false {
+            return Err("Error, expected (");
         }
         self.advance_tokens();
 
@@ -100,17 +157,17 @@ impl Parser {
         let condition;
         match condition_result {
             Ok(v) => condition = Box::new(v),
-            _ => return Err("error".to_string()),
+            _ => return Err("error"),
         }
 
         if self.match_operator(')') == false {
-            return Err("Error, expected )".to_string());
+            return Err("Error, expected )");
         }
 
         self.advance_tokens();
 
         if self.match_delim('{') == false {
-            return Err("Error, expected {".to_string());
+            return Err("Error, expected {");
         }
 
         self.advance_tokens();
@@ -121,11 +178,11 @@ impl Parser {
 
         match consequence_result {
             Ok(v) => consequence = Box::new(v),
-            _ => return Err("error".to_string()),
+            _ => return Err("error"),
         }
 
         if self.match_delim('}') == false {
-            return Err("Error, expected }".to_string());
+            return Err("Error, expected }");
         }
 
         let then: Option<Box<Statement>>;
@@ -135,11 +192,11 @@ impl Parser {
                 let then_box;
                 match then_result {
                     Ok(v) => then_box = Box::new(v),
-                    _ => return Err("error".to_string()),
+                    _ => return Err("error"),
                 }
 
                 if self.match_delim('}') == false {
-                    return Err("Error, expected }".to_string());
+                    return Err("Error, expected }");
                 }
                 then = Some(then_box);
             }
@@ -154,7 +211,7 @@ impl Parser {
         })
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, String> {
+    fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
         self.advance_tokens();
         let statement = Statement::ReturnStatement {
             value: "".to_string(),
@@ -167,7 +224,8 @@ impl Parser {
 
         Ok(statement)
     }
-    fn expression_parser(&mut self) -> Result<Expression, String> {
+
+    fn expression_parser<'a>(&mut self) -> Result<Expression, &'a str> {
         let number;
         let mut precedence = 0;
         match self.token_vector[self.current_token] {
@@ -179,7 +237,7 @@ impl Parser {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
-                _ => return Err("error, expected a number".to_string()),
+                _ => return Err("error, expected a number"),
             };
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
@@ -192,17 +250,17 @@ impl Parser {
         self.next_token += 1;
     }
 
-    fn parse_return(&mut self) -> Result<Statement, String> {
+    fn parse_return<'a>(&mut self) -> Result<Statement, &'a str> {
         if &self.token_vector.len() <= &self.next_token {
-            return Err("error, expected an expression".to_string());
+            return Err("error, expected an expression");
         }
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
-                return Err("error, expected an expression".to_string());
+                return Err("error, expected an expression");
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("error, expected an expression".to_string());
+                return Err("error, expected an expression");
             }
         }
         Ok(Statement::ReturnStatement {
@@ -210,7 +268,7 @@ impl Parser {
         })
     }
 
-    fn parse_variable(&mut self) -> Result<Statement, String> {
+    fn parse_variable<'a>(&mut self) -> Result<Statement, &'a str> {
         let token: tokens::TokenTypes;
         let identifier: String;
         match &self.token_vector[self.next_token] {
@@ -218,33 +276,33 @@ impl Parser {
                 token = tokens::TokenTypes::Identifier(s.to_string());
             }
             tokens::TokenTypes::EndOfLine => {
-                return Err("error, expected an identifier".to_string());
+                return Err("error, expected an identifier");
             }
             _ => {
-                return Err("error, expected an identifier".to_string());
+                return Err("error, expected an identifier");
             }
         }
         self.advance_tokens();
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Operator('=') => identifier = "=".to_string(),
             tokens::TokenTypes::EndOfLine => {
-                return Err("error, expected = sign".to_string());
+                return Err("error, expected = sign");
             }
             _ => {
-                return Err("error, expected an identifier".to_string());
+                return Err("error, expected an identifier");
             }
         }
         self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {
-            return Err("error, expected an expression".to_string());
+            return Err("error, expected an expression");
         }
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
-                return Err("error, expected an expression".to_string());
+                return Err("error, expected an expression");
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("error, expected an expression".to_string());
+                return Err("error, expected an expression");
             }
         }
         Ok(Statement::VarStatement {
@@ -258,15 +316,15 @@ impl Parser {
         self.advance_tokens();
     }
 
-    fn infix_expression_parser(
+    fn infix_expression_parser<'a>(
         &mut self,
         precedence: usize,
         left_op: Expression,
-    ) -> Result<Expression, String> {
+    ) -> Result<Expression, &'a str> {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
-            _ => return Err("error, expected an operator".to_string()),
+            _ => return Err("error, expected an operator"),
         }
         self.advance_tokens();
         let next_precedence: usize = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -274,7 +332,7 @@ impl Parser {
         let num;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => num = s,
-            _ => return Err("error, expected a number".to_string()),
+            _ => return Err("error, expected a number"),
         };
         right_op = Expression::NumberLit { number: num };
         self.advance_tokens();
@@ -282,7 +340,7 @@ impl Parser {
             let result_op = self.infix_expression_parser(next_precedence, right_op);
             match result_op {
                 Ok(v) => right_op = v,
-                _ => return Err("error, expected a number".to_string()),
+                _ => return Err("error, expected a number"),
             };
         }
         Ok(Expression::InfixOp {
@@ -298,7 +356,7 @@ impl Parser {
         Expression::BoolExp { value: boolean }
     }
 
-    fn parse_grouped_expression(&mut self) -> Result<Expression, String> {
+    fn parse_grouped_expression<'a>(&mut self) -> Result<Expression, &'a str> {
         self.advance_tokens();
         let number;
         let mut precedence = 0;
@@ -311,7 +369,7 @@ impl Parser {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
-                _ => return Err("error, expected a number".to_string()),
+                _ => return Err("error, expected a number"),
             };
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }

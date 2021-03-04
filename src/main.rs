@@ -12,6 +12,7 @@ fn main() {
     println!("Axel version 0.1.0");
     println!("OS: {}", env::consts::OS);
     println!("Write exit to stop the program");
+    println!("Write read to parse a file");
     let args: Vec<String> = env::args().collect();
     let mut input = String::new();
 
