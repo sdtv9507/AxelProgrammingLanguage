@@ -1,4 +1,3 @@
-use std::process;
 use tokens::TokenTypes;
 
 use crate::tokens;
@@ -17,9 +16,19 @@ pub enum Statement {
         value: String,
     },
 
+    ConstStatement {
+        token: tokens::TokenTypes,
+        name: String,
+        value: String,
+    },
+
     ReturnStatement {
         value: String,
     },
+
+    ExpressionStatement {
+        value: Box<Expression>,
+    }
 }
 
 #[derive(Clone)]
@@ -73,6 +82,13 @@ impl Parser {
                     Err(e) => return Err(e),
                 }
             }
+            tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
+                let constant_statement = self.parse_constant();
+                match constant_statement {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
             tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
                 let return_statement = self.parse_return();
                 match return_statement {
@@ -81,48 +97,62 @@ impl Parser {
                 }
             }
 
-            _ => return Err("error, expected a statement"),
+            _ => { 
+                let expression_statement = self.parse_expressions();
+                match expression_statement {
+                    Ok(s) => {
+                        let statement = Statement::ExpressionStatement {
+                            value: Box::from(s),
+                        };
+                        return Ok(statement);
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
         }
     }
 
-    pub fn parse_line(&mut self) {
+    pub fn parse_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
                 let if_statement = self.parse_if();
-            }
-
-            tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
-                let variable_statement = self.parse_variable();
-                //println!("token: {0}, name: {1}, value: {1}", variable_statement.token, variable_statement.value);
-            }
-
-            tokens::TokenTypes::Keywords(tokens::Keywords::Const) => {
-                let const_statement = self.parse_constant();
+                match if_statement {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Function) => {
-                let function_statement = self.parse_function().unwrap_or_else(|err| {
-                    println!("Error: {}", err);
-                    process::exit(1);
-                });
-                //println!("{}", return_statement.value);
+                let function_statement = self.parse_function();
+                match function_statement {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
             }
 
-            tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
-                let return_statement = self.parse_return();
-                //println!("{}", return_statement.value);
+            tokens::TokenTypes::Keywords(tokens::Keywords::True) => {
+                let true_statement = self.parse_boolean();
+                Ok(true_statement)
             }
 
-            tokens::TokenTypes::Identifier(s) => {
-                println!("identifier: {}", s);
+            tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
+                let false_statement = self.parse_boolean();
+                Ok(false_statement)
             }
 
-            tokens::TokenTypes::Comment => {
-                println!("This is a comment: Line ignored");
-            }
+            //tokens::TokenTypes::Identifier(s) => {
+            //    println!("identifier: {}", s);
+            //}
+
+            //tokens::TokenTypes::Comment => {
+            //    println!("This is a comment: Line ignored");
+            //}
             _ => {
-                self.expression_parser();
-                //Parser::parse_expression(&self.token_vector);
+                let expression = self.expression_parser();
+                match expression {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
             }
         }
     }
@@ -352,8 +382,48 @@ impl Parser {
         })
     }
 
-    fn parse_constant(&mut self) {
+    fn parse_constant<'a>(&mut self) -> Result<Statement, &'a str>{
+        let token: tokens::TokenTypes;
+        let identifier: String;
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Identifier(s) => {
+                token = tokens::TokenTypes::Identifier(s.to_string());
+            }
+            tokens::TokenTypes::EndOfLine => {
+                return Err("error, expected an identifier");
+            }
+            _ => {
+                return Err("error, expected an identifier");
+            }
+        }
         self.advance_tokens();
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Operator('=') => identifier = "=".to_string(),
+            tokens::TokenTypes::EndOfLine => {
+                return Err("error, expected = sign");
+            }
+            _ => {
+                return Err("error, expected an identifier");
+            }
+        }
+        self.advance_tokens();
+        if &self.token_vector.len() <= &self.next_token {
+            return Err("error, expected an expression");
+        }
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
+            self.advance_tokens();
+            if self.token_vector.len() == self.next_token {
+                return Err("error, expected an expression");
+            }
+            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
+                return Err("error, expected an expression");
+            }
+        }
+        Ok(Statement::ConstStatement {
+            token: token,
+            name: identifier,
+            value: "string".to_string(),
+        })
     }
 
     fn infix_expression_parser<'a>(

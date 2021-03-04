@@ -21,7 +21,11 @@ fn main() {
 
         let token = lexer::get_keywords(&contents);
         let mut parser = Parser::new(token);
-        parser.parse_line();
+        let result = parser.check_statement();
+        match result {
+            Ok(_s) => println!("Program success"),
+            Err(e) => println!("Exit program with error: {}", e),
+        }
     }
 
     loop {
@@ -51,11 +55,19 @@ fn main() {
 
             let token = lexer::get_keywords(&contents);
             let mut parser = Parser::new(token);
-            parser.parse_line();
+            let result = parser.check_statement();
+            match result {
+                Ok(_s) => println!("Program success"),
+                Err(e) => println!("Exit program with error: {}", e),
+            }
         } else {
             let token = lexer::get_keywords(&input);
             let mut parser = Parser::new(token);
-            parser.parse_line();
+            let result = parser.check_statement();
+            match result {
+                Ok(_s) => println!("Program success"),
+                Err(e) => println!("Exit program with error: {}", e),
+            }
         }
     }
 }
