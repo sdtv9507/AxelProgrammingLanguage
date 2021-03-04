@@ -1,3 +1,4 @@
+use std::process;
 use tokens::TokenTypes;
 
 use crate::tokens;
@@ -38,6 +39,7 @@ pub enum Expression {
     },
 
     FunctionExpr {
+        identifier: String,
         parameters: Vec<String>,
         body: Box<Statement>,
     },
@@ -77,7 +79,10 @@ impl Parser {
             }
 
             tokens::TokenTypes::Keywords(tokens::Keywords::Function) => {
-                let function_statement = self.parse_function();
+                let function_statement = self.parse_function().unwrap_or_else(|err| {
+                    println!("Error: {}", err);
+                    process::exit(1);
+                });
                 //println!("{}", return_statement.value);
             }
 
@@ -101,6 +106,14 @@ impl Parser {
     }
 
     fn parse_function<'a>(& mut self) -> Result<Expression, &'a str> {
+        let identifier: String;
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
+            _ => return Err("Error, expected an identifier"),
+        }
+
+        self.advance_tokens();
+
         if self.match_operator('(') == false {
             return Err("Error, expected (");
         }
@@ -142,6 +155,7 @@ impl Parser {
         }
 
         Ok(Expression::FunctionExpr {
+            identifier: identifier,
             parameters: parameters,
             body: statement,
         })
@@ -217,7 +231,7 @@ impl Parser {
             value: "".to_string(),
         };
 
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator('}') {
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Delim('}') {
             //statement = self.parse_line();
             self.advance_tokens();
         }
