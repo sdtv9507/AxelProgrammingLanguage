@@ -13,7 +13,7 @@ pub enum Statement {
     VarStatement {
         token: tokens::TokenTypes,
         name: String,
-        value: String,
+        value: Box<Expression>,
     },
 
     ConstStatement {
@@ -23,7 +23,7 @@ pub enum Statement {
     },
 
     ReturnStatement {
-        value: String,
+        value: Box<Expression>,
     },
 
     ExpressionStatement {
@@ -197,8 +197,8 @@ impl Parser {
                 self.advance_tokens();
                 self.advance_tokens();
             }
-            println!("{}",self.token_vector[self.current_token]);
-            println!("{}",self.token_vector[self.next_token]);
+            println!("{}", self.token_vector[self.current_token]);
+            println!("{}", self.token_vector[self.next_token]);
         }
 
         println!("finish");
@@ -327,15 +327,16 @@ impl Parser {
 
     fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
         self.advance_tokens();
-        let mut statement = Statement::ReturnStatement {
-            value: "".to_string(),
-        };
+        let mut statement: Statement;
 
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Delim('}') {
+        loop {
             let check_statement = self.check_statement();
             match check_statement {
                 Ok(s) => statement = s,
                 Err(e) => return Err(e),
+            }
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
+                break;
             }
             self.advance_tokens();
         }
@@ -372,7 +373,8 @@ impl Parser {
         if &self.token_vector.len() <= &self.next_token {
             return Err("error, expected an expression");
         }
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
+        let mut result_op: Expression;
+        loop {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
                 return Err("error, expected an expression");
@@ -380,9 +382,19 @@ impl Parser {
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 return Err("error, expected an expression");
             }
+            let number;
+            match self.token_vector[self.current_token] {
+                tokens::TokenTypes::NumbersInt(s) => number = s,
+                _ => number = 0,
+            }
+            let left_op = Expression::NumberLit { number: number };
+            result_op = self.infix_expression_parser(0, left_op)?;
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
+                break;
+            }
         }
         Ok(Statement::ReturnStatement {
-            value: "string".to_string(),
+            value: Box::from(result_op),
         })
     }
 
@@ -414,7 +426,9 @@ impl Parser {
         if &self.token_vector.len() <= &self.next_token {
             return Err("error, expected an expression");
         }
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
+
+        let mut result_op;
+        loop {
             self.advance_tokens();
             if self.token_vector.len() == self.next_token {
                 return Err("error, expected an expression");
@@ -422,11 +436,21 @@ impl Parser {
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 return Err("error, expected an expression");
             }
+            let number;
+            match self.token_vector[self.current_token] {
+                tokens::TokenTypes::NumbersInt(s) => number = s,
+                _ => number = 0,
+            }
+            let left_op = Expression::NumberLit { number: number };
+            result_op = self.infix_expression_parser(0, left_op)?;
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
+                break;
+            }
         }
         Ok(Statement::VarStatement {
             token: token,
             name: identifier,
-            value: "string".to_string(),
+            value: Box::from(result_op),
         })
     }
 
@@ -537,99 +561,6 @@ impl Parser {
         }
 
         Ok(left_op)
-    }
-
-    fn parse_expression(line: &Vec<tokens::TokenTypes>) {
-        let mut index = 0;
-        let mut operation: Vec<&char> = Vec::new();
-        let mut num_vector = Vec::new();
-        let mut operation_index = 0;
-        let mut num_vector_index = 0;
-        loop {
-            match &line[index] {
-                tokens::TokenTypes::NumbersInt(s) => {
-                    num_vector.insert(num_vector_index, s);
-                    num_vector_index += 1;
-                }
-
-                tokens::TokenTypes::Operator(s) => {
-                    operation.insert(operation_index, s);
-                    operation_index += 1;
-                }
-
-                _ => {
-                    println!("illegal expression");
-                }
-            }
-            index += 1;
-            if index > line.len() - 1 {
-                break;
-            }
-        }
-        Parser::operate(&num_vector, &operation);
-    }
-
-    fn operate(numbers_vector: &Vec<&i32>, operators: &Vec<&char>) {
-        let mut operations: usize = 0;
-        let mut final_value = 0;
-        let mut n = 0;
-        if operators.len() == 0 {
-            final_value = 0;
-        } else if operators.len() == 1 {
-            let number1 = numbers_vector[operations];
-            let number2 = &numbers_vector[&operations + 1];
-            match operators[operations] {
-                '+' => {
-                    n = Parser::add(number1, number2);
-                }
-                '-' => {
-                    n = Parser::minus(number1, number2);
-                }
-                _ => println!("Error"),
-            }
-            final_value = n;
-        } else {
-            while operations <= operators.len() - 1 {
-                if operations == 0 {
-                    final_value += numbers_vector[operations];
-                }
-                let number2 = &numbers_vector[&operations + 1];
-                match operators[operations] {
-                    '+' => {
-                        n = Parser::add(&final_value, number2);
-                    }
-                    '-' => {
-                        n = Parser::minus(&final_value, number2);
-                    }
-                    '*' => {
-                        n = Parser::mult(&final_value, number2);
-                    }
-                    '/' => {
-                        n = Parser::divide(&final_value, number2);
-                    }
-                    _ => break,
-                }
-                final_value = n;
-                operations += 1;
-            }
-        }
-        println!("Result: {}", final_value);
-    }
-
-    fn add(num1: &i32, num2: &i32) -> i32 {
-        num1 + num2
-    }
-
-    fn minus(num1: &i32, num2: &i32) -> i32 {
-        num1 - num2
-    }
-
-    fn mult(num1: &i32, num2: &i32) -> i32 {
-        num1 * num2
-    }
-
-    fn divide(num1: &i32, num2: &i32) -> i32 {
-        num1 / num2
     }
 
     fn get_precedence(token: &tokens::TokenTypes) -> usize {
