@@ -54,12 +54,34 @@ pub enum Expression {
         right: Box<Expression>,
     },
 }
+
 impl Parser {
     pub fn new(line: Vec<tokens::TokenTypes>) -> Self {
         Parser {
             token_vector: line,
             current_token: 0,
             next_token: 1,
+        }
+    }
+
+    pub fn check_statement<'a>(&mut self) -> Result<Statement, &'a str> {
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
+                let variable_statement = self.parse_variable();
+                match variable_statement {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
+            tokens::TokenTypes::Keywords(tokens::Keywords::Return) => {
+                let return_statement = self.parse_return();
+                match return_statement {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
+
+            _ => return Err("error, expected a statement"),
         }
     }
 
@@ -147,7 +169,7 @@ impl Parser {
 
         match statement_result {
             Ok(v) => statement = Box::new(v),
-            _ => return Err("error"),
+            _ => return Err("error parsing statement"),
         }
 
         if self.match_delim('}') == false {
@@ -171,7 +193,7 @@ impl Parser {
         let condition;
         match condition_result {
             Ok(v) => condition = Box::new(v),
-            _ => return Err("error"),
+            _ => return Err("error parsing condition statement"),
         }
 
         if self.match_operator(')') == false {
@@ -192,7 +214,7 @@ impl Parser {
 
         match consequence_result {
             Ok(v) => consequence = Box::new(v),
-            _ => return Err("error"),
+            _ => return Err("error parsing else"),
         }
 
         if self.match_delim('}') == false {
@@ -206,7 +228,7 @@ impl Parser {
                 let then_box;
                 match then_result {
                     Ok(v) => then_box = Box::new(v),
-                    _ => return Err("error"),
+                    _ => return Err("error parsing else statement"),
                 }
 
                 if self.match_delim('}') == false {
@@ -227,12 +249,16 @@ impl Parser {
 
     fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
         self.advance_tokens();
-        let statement = Statement::ReturnStatement {
+        let mut statement = Statement::ReturnStatement {
             value: "".to_string(),
         };
 
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Delim('}') {
-            //statement = self.parse_line();
+            let check_statement = self.check_statement();
+            match check_statement {
+                Ok(s) => statement = s,
+                Err(e) => return Err(e),
+            }
             self.advance_tokens();
         }
 

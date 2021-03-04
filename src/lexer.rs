@@ -21,51 +21,39 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
         }
         match chr {
             '+' => {
-                println!("+");
                 token_vector.push(tokens::TokenTypes::Operator('+'));
             }
             '-' => {
-                println!("-");
                 token_vector.push(tokens::TokenTypes::Operator('-'));
             }
             '=' => {
-                println!("=");
                 token_vector.push(tokens::TokenTypes::Operator('='));
             }
             '*' => {
-                println!("*");
                 token_vector.push(tokens::TokenTypes::Operator('*'));
             }
             '/' => {
-                println!("/");
                 token_vector.push(tokens::TokenTypes::Operator('/'));
             }
             '(' => {
-                println!("(");
                 token_vector.push(tokens::TokenTypes::Operator('('));
             }
             ')' => {
-                println!(")");
                 token_vector.push(tokens::TokenTypes::Operator(')'));
             }
             '{' => {
-                println!("{{");
                 token_vector.push(tokens::TokenTypes::Delim('{'));
             }
             '}' => {
-                println!("}}");
                 token_vector.push(tokens::TokenTypes::Delim('}'));
             }
             '#' => {
-                println!("comment");
                 token_vector.push(tokens::TokenTypes::Comment);
             }
             ',' => {
-                println!("comma");
                 token_vector.push(tokens::TokenTypes::Comma);
             }
             ';' => {
-                println!("semicolon");
                 token_vector.push(tokens::TokenTypes::Semicolon);
             }
             '"' => {
@@ -81,12 +69,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 }
                 let string = &text_vec[index..final_index].iter().collect::<String>().to_string();
                 let final_string = string.parse().unwrap();
-                println!("string: {0}, {1}, {2}", final_string, index, final_index);
                 token_vector.push(tokens::TokenTypes::Strings(final_string));
                 index = final_index - 1;
             }
 			'\x00' => {
-                println!("end of line");
 				token_vector.push(tokens::TokenTypes::EndOfLine);
 				break;
 			}
@@ -103,7 +89,6 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                     }
                     let identifier: &str = &text_vec[index..final_index].iter().collect::<String>();
                     let int_identifier = identifier.parse().unwrap();
-                    println!("{}", int_identifier);
                     token_vector.push(tokens::TokenTypes::NumbersInt(int_identifier));
                     index = final_index - 1;
                 }else if is_valid_identifier(chr) == true {
@@ -113,7 +98,6 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         chr = text_vec[final_index];
                     }
                     let identifier: &str = &text_vec[index..final_index].iter().collect::<String>();
-                    println!("{}", identifier);
                     match identifier {
                         "if" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::If));
@@ -152,7 +136,6 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                     }
                     index = final_index - 1;
                 } else {
-                    println!("{}", chr);
                     token_vector.push(tokens::TokenTypes::Illegal);
                 }
             }
