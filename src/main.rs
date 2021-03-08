@@ -5,6 +5,7 @@ use std::{io, path::PathBuf};
 mod lexer;
 mod parser;
 mod tokens;
+mod object;
 
 use crate::parser::Parser;
 
