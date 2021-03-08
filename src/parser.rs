@@ -37,6 +37,10 @@ pub enum Expression {
         number: i32,
     },
 
+    StringLit {
+        number: i32,
+    },
+
     BoolExp {
         value: bool,
     },
@@ -118,7 +122,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
+    fn parse_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
                 let if_expression = self.parse_if();
@@ -167,6 +171,16 @@ impl Parser {
         }
     }
 
+    fn parse_prefix_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => 
+                return Ok(Expression::NumberLit {
+                    number: s,
+                }),
+            _ => return Err("expected an expression"),
+        }
+    }
+
     fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
         let name;
         match &self.token_vector[self.current_token] {
@@ -181,12 +195,12 @@ impl Parser {
         self.advance_tokens();
         let mut expressions: Vec<Expression> = Vec::new();
         while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
-            let number;
-            match self.token_vector[self.current_token] {
-                tokens::TokenTypes::NumbersInt(s) => number = s,
-                _ => number = 0,
+            let left_op;
+            let parsed_prefix = self.parse_prefix_expressions();
+            match parsed_prefix {
+                Ok(s) => left_op = s,
+                Err(e) => return Err(e),
             }
-            let left_op = Expression::NumberLit { number: number };
             let result_op = self.infix_expression_parser(0, left_op);
             match result_op {
                 Ok(s) => expressions.push(s.clone()),
@@ -345,13 +359,13 @@ impl Parser {
     }
 
     fn expression_parser<'a>(&mut self) -> Result<Expression, &'a str> {
-        let number;
         let mut precedence = 0;
-        match self.token_vector[self.current_token] {
-            tokens::TokenTypes::NumbersInt(s) => number = s,
-            _ => number = 0,
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
         }
-        let mut left_op = Expression::NumberLit { number: number };
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
@@ -382,12 +396,12 @@ impl Parser {
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 return Err("error, expected an expression");
             }
-            let number;
-            match self.token_vector[self.current_token] {
-                tokens::TokenTypes::NumbersInt(s) => number = s,
-                _ => number = 0,
+            let left_op;
+            let op = self.parse_prefix_expressions();
+            match op {
+                Ok(s) => left_op = s,
+                Err(e) => return Err(e),
             }
-            let left_op = Expression::NumberLit { number: number };
             result_op = self.infix_expression_parser(0, left_op)?;
             if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
                 break;
@@ -436,12 +450,12 @@ impl Parser {
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 return Err("error, expected an expression");
             }
-            let number;
-            match self.token_vector[self.current_token] {
-                tokens::TokenTypes::NumbersInt(s) => number = s,
-                _ => number = 0,
+            let left_op;
+            let op = self.parse_prefix_expressions();
+            match op {
+                Ok(s) => left_op = s,
+                Err(e) => return Err(e),
             }
-            let left_op = Expression::NumberLit { number: number };
             result_op = self.infix_expression_parser(0, left_op)?;
             if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
                 break;
@@ -512,20 +526,19 @@ impl Parser {
         self.advance_tokens();
         let next_precedence: usize = Parser::get_precedence(&self.token_vector[self.current_token]);
         let mut right_op;
-        let num;
-
-        match self.token_vector[self.current_token] {
-            tokens::TokenTypes::NumbersInt(s) => num = s,
-            _ => return Err("expected a value"),
-        };
-        right_op = Expression::NumberLit { number: num };
+        let prefix_op = self.parse_prefix_expressions();
+        match prefix_op {
+            Ok(s) => right_op = s,
+            Err(e) => return Err(e),
+        }
 
         self.advance_tokens();
+        let f = right_op.clone();
         if next_precedence > precedence {
             let result_op = self.infix_expression_parser(next_precedence, right_op);
             match result_op {
                 Ok(v) => right_op = v,
-                _ => right_op = Expression::NumberLit { number: num },
+                _ => right_op = f,
             };
         }
 
@@ -544,13 +557,13 @@ impl Parser {
 
     fn parse_grouped_expression<'a>(&mut self) -> Result<Expression, &'a str> {
         self.advance_tokens();
-        let number;
         let mut precedence = 0;
-        match self.token_vector[self.current_token] {
-            tokens::TokenTypes::NumbersInt(s) => number = s,
-            _ => number = 0,
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
         }
-        let mut left_op = Expression::NumberLit { number: number };
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
