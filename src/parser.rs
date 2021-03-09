@@ -11,7 +11,6 @@ pub struct Parser {
 #[derive(Clone)]
 pub enum Statement {
     VarStatement {
-        token: tokens::TokenTypes,
         name: String,
         value: Box<Expression>,
     },
@@ -391,16 +390,16 @@ impl Parser {
 
     fn parse_return<'a>(&mut self) -> Result<Statement, &'a str> {
         if &self.token_vector.len() <= &self.next_token {
-            return Err("error, expected an expression");
+            return Err("expected an expression");
         }
         let mut result_op: Expression;
         loop {
             self.advance_tokens();
-            if self.token_vector.len() == self.next_token {
-                return Err("error, expected an expression");
+            if self.token_vector.len() <= self.next_token {
+                return Err("token overflow on return parse");
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("error, expected an expression");
+                return Err("reached end of line without semicolon on return parse");
             }
             let left_op;
             let op = self.parse_prefix_expressions();
@@ -409,7 +408,7 @@ impl Parser {
                 Err(e) => return Err(e),
             }
             result_op = self.infix_expression_parser(0, left_op)?;
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
                 break;
             }
         }
@@ -419,42 +418,30 @@ impl Parser {
     }
 
     fn parse_variable<'a>(&mut self) -> Result<Statement, &'a str> {
-        let token: tokens::TokenTypes;
         let identifier: String;
-        match &self.token_vector[self.next_token] {
-            tokens::TokenTypes::Identifier(s) => {
-                token = tokens::TokenTypes::Identifier(s.to_string());
-            }
-            tokens::TokenTypes::EndOfLine => {
-                return Err("error, expected an identifier");
-            }
-            _ => {
-                return Err("error, expected an identifier");
-            }
-        }
         self.advance_tokens();
         match &self.token_vector[self.next_token] {
             tokens::TokenTypes::Operator('=') => identifier = "=".to_string(),
             tokens::TokenTypes::EndOfLine => {
-                return Err("error, expected = sign");
+                return Err("expected = sign");
             }
             _ => {
-                return Err("error, expected an identifier");
+                return Err("expected an identifier");
             }
         }
         self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {
-            return Err("error, expected an expression");
+            return Err("expected an expression");
         }
 
         let mut result_op;
         loop {
             self.advance_tokens();
             if self.token_vector.len() <= self.next_token {
-                return Err("error, token overflow");
+                return Err("token overflow on variable parse");
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("error, reached end of line without semicolon");
+                return Err("reached end of line without semicolon on variable parse");
             }
             let left_op;
             let op = self.parse_prefix_expressions();
@@ -468,7 +455,6 @@ impl Parser {
             }
         }
         Ok(Statement::VarStatement {
-            token: token,
             name: identifier,
             value: Box::from(result_op),
         })

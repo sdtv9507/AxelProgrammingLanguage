@@ -6,6 +6,9 @@ mod lexer;
 mod parser;
 mod tokens;
 mod object;
+mod evaluate;
+
+use evaluate::eval_statement;
 
 use crate::parser::Parser;
 
@@ -66,7 +69,13 @@ fn main() {
             let mut parser = Parser::new(token);
             let result = parser.check_statement();
             match result {
-                Ok(_s) => println!("Program success"),
+                Ok(_s) => {
+                    let statement = eval_statement(_s);
+                    match statement {
+                        Ok(s) => println!("Evaluation success: {}", s),
+                        Err(e) => println!("Evaluation error: {}", e),
+                    }
+                },
                 Err(e) => println!("Exit program with error: {}", e),
             }
         }
