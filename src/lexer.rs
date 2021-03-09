@@ -31,7 +31,22 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 token_vector.push(tokens::TokenTypes::Operator('-'));
             }
             '=' => {
-                token_vector.push(tokens::TokenTypes::Operator('='));
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::Equal);
+                }else{
+                    token_vector.push(tokens::TokenTypes::Operator('='));
+                }
+            }
+            '!' => {
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::NotEqual);
+                }else{
+                    token_vector.push(tokens::TokenTypes::Bang);
+                }
             }
             '*' => {
                 token_vector.push(tokens::TokenTypes::Operator('*'));

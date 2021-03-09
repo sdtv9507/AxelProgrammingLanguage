@@ -174,7 +174,8 @@ impl Parser {
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => return Ok(Expression::NumberLit { number: s }),
             tokens::TokenTypes::Operator('-') => {
-                let parse_exp = self.parse_expressions();
+                self.advance_tokens();
+                let parse_exp = self.expression_parser();
                 let expression;
                 match parse_exp {
                     Ok(s) => expression = s,
@@ -185,6 +186,21 @@ impl Parser {
                     right: Box::new(expression),
                 });
             }
+            tokens::TokenTypes::Bang => {
+                self.advance_tokens();
+                let parse_exp = self.expression_parser();
+                let expression;
+                match parse_exp {
+                    Ok(s) => expression = s,
+                    Err(e) => return Err(e),
+                }
+                return Ok(Expression::Prefix {
+                    operator: tokens::TokenTypes::Bang,
+                    right: Box::new(expression),
+                });
+            }
+            tokens::TokenTypes::Keywords(tokens::Keywords::True) => return Ok(Expression::BoolExp {value: true}),
+            tokens::TokenTypes::Keywords(tokens::Keywords::False) => return Ok(Expression::BoolExp {value: false}),
             _ => return Err("expected an expression"),
         }
     }
@@ -371,12 +387,15 @@ impl Parser {
             Ok(s) => left_op = s,
             Err(e) => return Err(e),
         }
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::EndOfLine {
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
                 Err(e) => return Err(e),
             };
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
+                break;
+            }
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
 

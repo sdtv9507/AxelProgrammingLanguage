@@ -3,7 +3,6 @@ use std::fmt;
 pub enum Objects {
     Integer(i32),
     Boolean(bool),
-    Null,
 }
 
 impl fmt::Display for Objects {
@@ -11,7 +10,6 @@ impl fmt::Display for Objects {
         match &self {
             Objects::Integer(i) => write!(f, "Integer: {}", i),
             Objects::Boolean(b) => write!(f, "Boolean: {}", b),
-            Objects::Null => write!(f, "Null"),
         }
     }
 }
