@@ -1,3 +1,5 @@
+use object::Objects;
+
 use crate::{object, tokens};
 use crate::parser;
 
@@ -11,6 +13,11 @@ pub fn eval_expression<'a>(expression: parser::Expression) -> Result<object::Obj
                 Ok(s) => return Ok(eval_prefix_expression(operator, s)),
                 Err(e) => return Err(e),
             }
+        }
+        parser::Expression::InfixOp {left, right, operator} => {
+            let evaluate_left = eval_expression(*left)?;
+            let evaluate_right = eval_expression(*right)?;
+            return Ok(eval_infix_expression(operator, evaluate_left, evaluate_right));
         }
         _ => return Err("expected an expression to eval"),
     }
@@ -63,5 +70,20 @@ fn eval_minus_operator<'a>(obj: object::Objects) -> Result<object::Objects, &'a 
     match obj {
         object::Objects::Integer(s) => return Ok(object::Objects::Integer(-s)),
         _ => return Err("expected an integer to the right of - sign"),
+    }
+}
+
+fn eval_infix_expression(operator: tokens::TokenTypes, left: object::Objects, right: object::Objects) -> object::Objects {
+    match (left, right) {
+        (Objects::Integer(s), Objects::Integer(r)) => {
+            match operator {
+                tokens::TokenTypes::Operator('+') => return Objects::Integer(s + r),
+                tokens::TokenTypes::Operator('-') => return Objects::Integer(s - r),
+                tokens::TokenTypes::Operator('*') => return Objects::Integer(s * r),
+                tokens::TokenTypes::Operator('/') => return Objects::Integer(s / r),
+                _ => return Objects::Boolean(false),
+            }
+        },
+        _ => return Objects::Boolean(false),
     }
 }
