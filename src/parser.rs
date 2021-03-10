@@ -199,8 +199,12 @@ impl Parser {
                     right: Box::new(expression),
                 });
             }
-            tokens::TokenTypes::Keywords(tokens::Keywords::True) => return Ok(Expression::BoolExp {value: true}),
-            tokens::TokenTypes::Keywords(tokens::Keywords::False) => return Ok(Expression::BoolExp {value: false}),
+            tokens::TokenTypes::Keywords(tokens::Keywords::True) => {
+                return Ok(Expression::BoolExp { value: true })
+            }
+            tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
+                return Ok(Expression::BoolExp { value: false })
+            }
             _ => return Err("expected an expression"),
         }
     }
@@ -412,24 +416,26 @@ impl Parser {
             return Err("expected an expression");
         }
         let mut result_op: Expression;
+        self.advance_tokens();
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
+        }
+        self.advance_tokens();
         loop {
-            self.advance_tokens();
             if self.token_vector.len() <= self.next_token {
                 return Err("token overflow on return parse");
             }
             if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
                 return Err("reached end of line without semicolon on return parse");
             }
-            let left_op;
-            let op = self.parse_prefix_expressions();
-            match op {
-                Ok(s) => left_op = s,
-                Err(e) => return Err(e),
-            }
             result_op = self.infix_expression_parser(0, left_op)?;
             if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
                 break;
             }
+            left_op = result_op;
         }
         Ok(Statement::ReturnStatement {
             value: Box::from(result_op),
@@ -528,41 +534,57 @@ impl Parser {
         precedence: usize,
         left_op: Expression,
     ) -> Result<Expression, &'a str> {
-        self.advance_tokens();
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
-            tokens::TokenTypes::Compare(tokens::Comparison::Equal) => op = tokens::TokenTypes::Compare(tokens::Comparison::Equal),
-            tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => op = tokens::TokenTypes::Compare(tokens::Comparison::NotEqual),
-            tokens::TokenTypes::Compare(tokens::Comparison::Less) => op = tokens::TokenTypes::Compare(tokens::Comparison::Less),
-            tokens::TokenTypes::Compare(tokens::Comparison::LessE) => op = tokens::TokenTypes::Compare(tokens::Comparison::LessE),
-            tokens::TokenTypes::Compare(tokens::Comparison::Greater) => op = tokens::TokenTypes::Compare(tokens::Comparison::Greater),
-            tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => op = tokens::TokenTypes::Compare(tokens::Comparison::GreaterE),
+            tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::Equal)
+            }
+            tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::NotEqual)
+            }
+            tokens::TokenTypes::Compare(tokens::Comparison::Less) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::Less)
+            }
+            tokens::TokenTypes::Compare(tokens::Comparison::LessE) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::LessE)
+            }
+            tokens::TokenTypes::Compare(tokens::Comparison::Greater) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::Greater)
+            }
+            tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => {
+                op = tokens::TokenTypes::Compare(tokens::Comparison::GreaterE)
+            }
             _ => return Ok(left_op),
         }
 
-        self.advance_tokens();
         let next_precedence: usize = Parser::get_precedence(&op);
-        let mut right_op;
-        let prefix_op = self.parse_prefix_expressions();
-        match prefix_op {
-            Ok(s) => right_op = s,
-            Err(e) => return Err(e),
-        }
-
-        if next_precedence > precedence {
+        if next_precedence > precedence
+            && &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon
+        {
+            self.advance_tokens();
+            let mut right_op;
+            let prefix_op = self.parse_prefix_expressions();
+            match prefix_op {
+                Ok(s) => right_op = s,
+                Err(e) => return Err(e),
+            }
+    
+            self.advance_tokens();
             let result_op = self.infix_expression_parser(next_precedence, right_op);
             match result_op {
                 Ok(v) => right_op = v,
                 Err(e) => return Err(e),
             };
+            return Ok(Expression::InfixOp {
+                left: Box::new(left_op.clone()),
+                operator: op,
+                right: Box::new(right_op.clone()),
+            });
+        }else{
+            return Ok(left_op);
         }
 
-        Ok(Expression::InfixOp {
-            left: Box::new(left_op.clone()),
-            operator: op,
-            right: Box::new(right_op.clone()),
-        })
     }
 
     fn parse_boolean(&mut self) -> Expression {
