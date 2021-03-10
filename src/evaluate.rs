@@ -73,7 +73,7 @@ fn eval_minus_operator<'a>(obj: object::Objects) -> Result<object::Objects, &'a 
     }
 }
 
-fn eval_infix_expression(operator: tokens::TokenTypes, left: object::Objects, right: object::Objects) -> object::Objects {
+fn eval_infix_expression(operator: tokens::TokenTypes, left: Objects, right: Objects) -> Objects {
     match (left, right) {
         (Objects::Integer(s), Objects::Integer(r)) => {
             match operator {
@@ -81,6 +81,12 @@ fn eval_infix_expression(operator: tokens::TokenTypes, left: object::Objects, ri
                 tokens::TokenTypes::Operator('-') => return Objects::Integer(s - r),
                 tokens::TokenTypes::Operator('*') => return Objects::Integer(s * r),
                 tokens::TokenTypes::Operator('/') => return Objects::Integer(s / r),
+                tokens::TokenTypes::Compare(tokens::Comparison::Equal) => return Objects::Boolean(s == r),
+                tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => return Objects::Boolean(s != r),
+                tokens::TokenTypes::Compare(tokens::Comparison::Less) => return Objects::Boolean(s < r),
+                tokens::TokenTypes::Compare(tokens::Comparison::LessE) => return Objects::Boolean(s <= r),
+                tokens::TokenTypes::Compare(tokens::Comparison::Greater) => return Objects::Boolean(s > r),
+                tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => return Objects::Boolean(s >= r),
                 _ => return Objects::Boolean(false),
             }
         },

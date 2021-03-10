@@ -7,8 +7,7 @@ pub enum TokenTypes {
     NumbersInt(i32),
     Strings(String),
     Delim(char),
-    Equal,
-    NotEqual,
+    Compare(Comparison),
     Bang,
     Comma,
     Semicolon,
@@ -28,6 +27,16 @@ pub enum Keywords {
     False,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Comparison {
+    Less,
+    Greater,
+    LessE,
+    GreaterE,
+    Equal,
+    NotEqual,
+}
+
 impl fmt::Display for TokenTypes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
@@ -37,8 +46,7 @@ impl fmt::Display for TokenTypes {
             TokenTypes::NumbersInt(s) => write!(f, "Number {}", s),
             TokenTypes::Strings(s) => write!(f, "String {}", s),
             TokenTypes::Delim(s) => write!(f, "Delim {}", s),
-            TokenTypes::Equal => write!(f, "Equal"),
-            TokenTypes::NotEqual => write!(f, "Not Equal"),
+            TokenTypes::Compare(s) => write!(f, "Compare {}", s),
             TokenTypes::Bang => write!(f, "Bang"),
             TokenTypes::Comma => write!(f, "Comma"),
             TokenTypes::Semicolon => write!(f, "Semicolon"),
@@ -60,6 +68,19 @@ impl fmt::Display for Keywords {
             Keywords::Function => write!(f, "Function statement"),
             Keywords::True => write!(f, "True statement"),
             Keywords::False => write!(f, "False statement"),
+        }
+    }
+}
+
+impl fmt::Display for Comparison {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Comparison::Less => write!(f, "<"),
+            Comparison::Greater => write!(f, ">"),
+            Comparison::LessE => write!(f, "<="),
+            Comparison::GreaterE => write!(f, ">="),
+            Comparison::Equal => write!(f, "=="),
+            Comparison::NotEqual => write!(f, "=="),
         }
     }
 }

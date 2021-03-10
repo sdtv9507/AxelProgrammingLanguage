@@ -532,6 +532,12 @@ impl Parser {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
+            tokens::TokenTypes::Compare(tokens::Comparison::Equal) => op = tokens::TokenTypes::Compare(tokens::Comparison::Equal),
+            tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => op = tokens::TokenTypes::Compare(tokens::Comparison::NotEqual),
+            tokens::TokenTypes::Compare(tokens::Comparison::Less) => op = tokens::TokenTypes::Compare(tokens::Comparison::Less),
+            tokens::TokenTypes::Compare(tokens::Comparison::LessE) => op = tokens::TokenTypes::Compare(tokens::Comparison::LessE),
+            tokens::TokenTypes::Compare(tokens::Comparison::Greater) => op = tokens::TokenTypes::Compare(tokens::Comparison::Greater),
+            tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => op = tokens::TokenTypes::Compare(tokens::Comparison::GreaterE),
             _ => return Ok(left_op),
         }
 
@@ -588,10 +594,11 @@ impl Parser {
 
     fn get_precedence(token: &tokens::TokenTypes) -> usize {
         match token {
-            tokens::TokenTypes::Operator('+') => 1,
-            tokens::TokenTypes::Operator('-') => 1,
-            tokens::TokenTypes::Operator('*') => 2,
-            tokens::TokenTypes::Operator('/') => 2,
+            tokens::TokenTypes::Operator('+') => 2,
+            tokens::TokenTypes::Operator('-') => 2,
+            tokens::TokenTypes::Operator('*') => 3,
+            tokens::TokenTypes::Operator('/') => 3,
+            tokens::TokenTypes::Compare(s) => 1,
             _ => 0,
         }
     }

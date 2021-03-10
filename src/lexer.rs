@@ -34,16 +34,34 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 let final_index = index + 1;
                 if text_vec[final_index] == '=' {
                     index += 1;
-                    token_vector.push(tokens::TokenTypes::Equal);
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Equal));
                 }else{
                     token_vector.push(tokens::TokenTypes::Operator('='));
+                }
+            }
+            '<' => {
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::LessE));
+                }else{
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Less));
+                }
+            }
+            '>' => {
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::GreaterE));
+                }else{
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Greater));
                 }
             }
             '!' => {
                 let final_index = index + 1;
                 if text_vec[final_index] == '=' {
                     index += 1;
-                    token_vector.push(tokens::TokenTypes::NotEqual);
+                    token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::NotEqual));
                 }else{
                     token_vector.push(tokens::TokenTypes::Bang);
                 }
