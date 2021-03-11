@@ -12,7 +12,7 @@ pub enum TokenTypes {
     Comma,
     Semicolon,
     Comment,
-	EndOfLine,
+    EndOfLine,
     Illegal,
 }
 #[derive(Debug, PartialEq, Clone, Copy)]

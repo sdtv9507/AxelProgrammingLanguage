@@ -2,11 +2,11 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::{io, path::PathBuf};
+mod evaluate;
 mod lexer;
+mod object;
 mod parser;
 mod tokens;
-mod object;
-mod evaluate;
 
 use evaluate::eval_statement;
 
@@ -75,7 +75,7 @@ fn main() {
                         Ok(s) => println!("Evaluation success: {}", s),
                         Err(e) => println!("Evaluation error: {}", e),
                     }
-                },
+                }
                 Err(e) => println!("Exit program with error: {}", e),
             }
         }

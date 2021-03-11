@@ -395,13 +395,17 @@ impl Parser {
             Err(e) => return Err(e),
         }
         self.advance_tokens();
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon
+            || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
+        {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
                 Err(e) => return Err(e),
             };
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
+                || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
+            {
                 break;
             }
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -518,7 +522,7 @@ impl Parser {
         if &self.token_vector.len() <= &self.next_token {
             return Err("error, expected an expression");
         }
-        
+
         let mut result_op: Expression;
         self.advance_tokens();
         let mut left_op;
@@ -593,7 +597,7 @@ impl Parser {
                 Ok(s) => right_op = s,
                 Err(e) => return Err(e),
             }
-    
+
             self.advance_tokens();
             let result_op = self.infix_expression_parser(next_precedence, right_op);
             match result_op {
@@ -605,10 +609,9 @@ impl Parser {
                 operator: op,
                 right: Box::new(right_op.clone()),
             });
-        }else{
+        } else {
             return Ok(left_op);
         }
-
     }
 
     fn parse_boolean(&mut self) -> Expression {

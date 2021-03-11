@@ -18,7 +18,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
         while is_ignored(chr) {
             index += 1;
             if index > text_vec.len() {
-				token_vector.push(tokens::TokenTypes::EndOfLine);
+                token_vector.push(tokens::TokenTypes::EndOfLine);
                 break;
             }
             chr = text_vec[index];
@@ -35,7 +35,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 if text_vec[final_index] == '=' {
                     index += 1;
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Equal));
-                }else{
+                } else {
                     token_vector.push(tokens::TokenTypes::Operator('='));
                 }
             }
@@ -44,7 +44,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 if text_vec[final_index] == '=' {
                     index += 1;
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::LessE));
-                }else{
+                } else {
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Less));
                 }
             }
@@ -53,7 +53,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 if text_vec[final_index] == '=' {
                     index += 1;
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::GreaterE));
-                }else{
+                } else {
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::Greater));
                 }
             }
@@ -62,7 +62,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 if text_vec[final_index] == '=' {
                     index += 1;
                     token_vector.push(tokens::TokenTypes::Compare(tokens::Comparison::NotEqual));
-                }else{
+                } else {
                     token_vector.push(tokens::TokenTypes::Bang);
                 }
             }
@@ -104,17 +104,20 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         break;
                     }
                 }
-                let string = &text_vec[index..final_index].iter().collect::<String>().to_string();
+                let string = &text_vec[index..final_index]
+                    .iter()
+                    .collect::<String>()
+                    .to_string();
                 let final_string = string.parse().unwrap();
                 token_vector.push(tokens::TokenTypes::Strings(final_string));
                 index = final_index - 1;
             }
-			'\x00' => {
+            '\x00' => {
                 println!("final?");
-			}
-			'\n' => {
+            }
+            '\n' => {
                 println!("line break?");
-			}
+            }
             _ => {
                 if is_valid_number(chr) == true {
                     let mut final_index = index;
@@ -126,7 +129,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                     let int_identifier = identifier.parse().unwrap();
                     token_vector.push(tokens::TokenTypes::NumbersInt(int_identifier));
                     index = final_index - 1;
-                }else if is_valid_identifier(chr) == true {
+                } else if is_valid_identifier(chr) == true {
                     let mut final_index = index;
                     while is_valid_identifier(chr) == true {
                         final_index += 1;
@@ -137,25 +140,28 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         "if" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::If));
                         }
-                        
+
                         "else" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Else));
                         }
-                        
+
                         "var" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Var));
                         }
-                        
+
                         "const" => {
-                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Const));
+                            token_vector
+                                .push(tokens::TokenTypes::Keywords(tokens::Keywords::Const));
                         }
 
                         "return" => {
-                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Return));
+                            token_vector
+                                .push(tokens::TokenTypes::Keywords(tokens::Keywords::Return));
                         }
 
                         "fn" => {
-                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Function));
+                            token_vector
+                                .push(tokens::TokenTypes::Keywords(tokens::Keywords::Function));
                         }
 
                         "true" => {
@@ -163,10 +169,12 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         }
 
                         "false" => {
-                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::False));
+                            token_vector
+                                .push(tokens::TokenTypes::Keywords(tokens::Keywords::False));
                         }
                         _ => {
-                            token_vector.push(tokens::TokenTypes::Identifier(identifier.to_string()));
+                            token_vector
+                                .push(tokens::TokenTypes::Identifier(identifier.to_string()));
                         }
                     }
                     index = final_index - 1;
