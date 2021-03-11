@@ -10,7 +10,13 @@ pub fn eval_expression<'a>(expression: parser::Expression) -> Result<object::Obj
         parser::Expression::Prefix { operator, right } => {
             let evaluate_right = eval_expression(*right);
             match evaluate_right {
-                Ok(s) => return Ok(eval_prefix_expression(operator, s)),
+                Ok(s) => {
+                    let right_eval = eval_prefix_expression(operator, s);
+                    match right_eval {
+                        Ok(s) => return Ok(s),
+                        Err(e) => return Err(e),
+                    }
+                },
                 Err(e) => return Err(e),
             }
         }
@@ -21,11 +27,15 @@ pub fn eval_expression<'a>(expression: parser::Expression) -> Result<object::Obj
         } => {
             let evaluate_left = eval_expression(*left)?;
             let evaluate_right = eval_expression(*right)?;
-            return Ok(eval_infix_expression(
+            let infix = eval_infix_expression(
                 operator,
                 evaluate_left,
                 evaluate_right,
-            ));
+            );
+            match infix {
+                Ok(s) => return Ok(s),
+                Err(e) => return Err(e),
+            }
         }
         parser::Expression::IfExpr {
             condition,
@@ -56,66 +66,69 @@ pub fn eval_statement<'a>(statement: parser::Statement) -> Result<object::Object
     }
 }
 
-fn eval_prefix_expression(operator: tokens::TokenTypes, obj: object::Objects) -> object::Objects {
+fn eval_prefix_expression<'a>(operator: tokens::TokenTypes, obj: Objects) -> Result<Objects, &'a str> {
     match operator {
-        tokens::TokenTypes::Bang => return eval_bang_operator(obj),
+        tokens::TokenTypes::Bang => {
+            let bang_op = eval_bang_operator(obj);
+            match bang_op {
+                Ok(s) => return Ok(s),
+                Err(e) => return Err(e),
+            }
+        },
         tokens::TokenTypes::Operator('-') => {
             let min = eval_minus_operator(obj);
             match min {
-                Ok(s) => return s,
-                Err(e) => {
-                    println!("{}", e);
-                    return object::Objects::Boolean(false);
-                }
+                Ok(s) => return Ok(s),
+                Err(e) => return Err(e),
             }
         }
-        _ => return object::Objects::Boolean(false),
+        _ => return Err("operator prefix mismatch"),
     }
 }
 
-fn eval_bang_operator(obj: object::Objects) -> object::Objects {
+fn eval_bang_operator<'a>(obj: Objects) -> Result<Objects, &'a str> {
     match obj {
-        object::Objects::Boolean(true) => return object::Objects::Boolean(true),
-        object::Objects::Boolean(false) => return object::Objects::Boolean(false),
-        _ => return object::Objects::Boolean(false),
+        Objects::Boolean(true) => return Ok(Objects::Boolean(true)),
+        Objects::Boolean(false) => return Ok(Objects::Boolean(false)),
+        _ => return Err("expected boolean object"),
     }
 }
 
-fn eval_minus_operator<'a>(obj: object::Objects) -> Result<object::Objects, &'a str> {
+fn eval_minus_operator<'a>(obj: Objects) -> Result<Objects, &'a str> {
     match obj {
-        object::Objects::Integer(s) => return Ok(object::Objects::Integer(-s)),
+        Objects::Integer(s) => return Ok(Objects::Integer(-s)),
         _ => return Err("expected an integer to the right of - sign"),
     }
 }
 
-fn eval_infix_expression(operator: tokens::TokenTypes, left: Objects, right: Objects) -> Objects {
+fn eval_infix_expression<'a>(operator: tokens::TokenTypes, left: Objects, right: Objects) -> Result<Objects, &'a str> {
     match (left, right) {
         (Objects::Integer(s), Objects::Integer(r)) => match operator {
-            tokens::TokenTypes::Operator('+') => return Objects::Integer(s + r),
-            tokens::TokenTypes::Operator('-') => return Objects::Integer(s - r),
-            tokens::TokenTypes::Operator('*') => return Objects::Integer(s * r),
-            tokens::TokenTypes::Operator('/') => return Objects::Integer(s / r),
+            tokens::TokenTypes::Operator('+') => return Ok(Objects::Integer(s + r)),
+            tokens::TokenTypes::Operator('-') => return Ok(Objects::Integer(s - r)),
+            tokens::TokenTypes::Operator('*') => return Ok(Objects::Integer(s * r)),
+            tokens::TokenTypes::Operator('/') => return Ok(Objects::Integer(s / r)),
             tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
-                return Objects::Boolean(s == r)
+                return Ok(Objects::Boolean(s == r));
             }
             tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => {
-                return Objects::Boolean(s != r)
+                return Ok(Objects::Boolean(s != r));
             }
             tokens::TokenTypes::Compare(tokens::Comparison::Less) => {
-                return Objects::Boolean(s < r)
+                return Ok(Objects::Boolean(s < r));
             }
             tokens::TokenTypes::Compare(tokens::Comparison::LessE) => {
-                return Objects::Boolean(s <= r)
+                return Ok(Objects::Boolean(s <= r));
             }
             tokens::TokenTypes::Compare(tokens::Comparison::Greater) => {
-                return Objects::Boolean(s > r)
+                return Ok(Objects::Boolean(s > r));
             }
             tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => {
-                return Objects::Boolean(s >= r)
+                return Ok(Objects::Boolean(s >= r));
             }
-            _ => return Objects::Boolean(false),
+            _ => return Err("unknown operator"),
         },
-        _ => return Objects::Boolean(false),
+        _ => return Err("operand type mismatch"),
     }
 }
 
