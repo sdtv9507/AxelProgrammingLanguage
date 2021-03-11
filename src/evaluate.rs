@@ -101,7 +101,12 @@ fn evaluate_if_condition<'a>(condition: parser::Expression, then: parser::Statem
     let obj_condition = eval_expression(condition.clone())?;
     match obj_condition {
         Objects::Boolean(true) => return Ok(return_if_condition(then)),
-        Objects::Boolean(false) => return Ok(return_if_condition(*other.unwrap())),
+        Objects::Boolean(false) => {
+            match other {
+                Some(s) => return Ok(return_if_condition(*s)),
+                _ => return Ok(Objects::Boolean(false)),
+            }
+        }
         _ => return Err("evaluating if expression"),
     }
 }
