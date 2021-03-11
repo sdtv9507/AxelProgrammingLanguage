@@ -304,25 +304,25 @@ impl Parser {
             return Err("Error, expected (");
         }
         self.advance_tokens();
+        self.advance_tokens();
 
         let condition_result = self.expression_parser();
         let condition;
         match condition_result {
             Ok(v) => condition = Box::new(v),
-            _ => return Err("error parsing condition statement"),
+            Err(e) => return Err(e),
         }
 
-        if self.match_operator(')') == false {
+        if self.match_current_operator(')') == false {
             return Err("Error, expected )");
         }
 
         self.advance_tokens();
 
-        if self.match_delim('{') == false {
+        if self.match_current_delim('{') == false {
             return Err("Error, expected {");
         }
 
-        self.advance_tokens();
         self.advance_tokens();
 
         let consequence_result = self.parse_statement();
@@ -330,24 +330,29 @@ impl Parser {
 
         match consequence_result {
             Ok(v) => consequence = Box::new(v),
-            _ => return Err("error parsing else"),
+            Err(e) => return Err(e),
         }
 
-        if self.match_delim('}') == false {
+        self.advance_tokens();
+        if self.match_current_delim('}') == false {
             return Err("Error, expected }");
         }
 
         let then: Option<Box<Statement>>;
         match self.token_vector[self.next_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::Else) => {
+                self.advance_tokens();
+                self.advance_tokens();
+                self.advance_tokens();
                 let then_result = self.parse_statement();
                 let then_box;
                 match then_result {
                     Ok(v) => then_box = Box::new(v),
-                    _ => return Err("error parsing else statement"),
+                    Err(e) => return Err(e),
                 }
 
-                if self.match_delim('}') == false {
+                self.advance_tokens();
+                if self.match_current_delim('}') == false {
                     return Err("Error, expected }");
                 }
                 then = Some(then_box);
@@ -364,7 +369,6 @@ impl Parser {
     }
 
     fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
-        self.advance_tokens();
         let mut statement: Statement;
 
         loop {
@@ -390,13 +394,14 @@ impl Parser {
             Ok(s) => left_op = s,
             Err(e) => return Err(e),
         }
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon {
+        self.advance_tokens();
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
                 Err(e) => return Err(e),
             };
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon {
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
                 break;
             }
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -651,8 +656,22 @@ impl Parser {
         }
     }
 
+    fn match_current_operator(&mut self, token: char) -> bool {
+        match self.token_vector[self.current_token] {
+            tokens::TokenTypes::Operator(s) if s == token => true,
+            _ => false,
+        }
+    }
+
     fn match_delim(&mut self, token: char) -> bool {
         match self.token_vector[self.next_token] {
+            tokens::TokenTypes::Delim(s) if s == token => true,
+            _ => false,
+        }
+    }
+
+    fn match_current_delim(&mut self, token: char) -> bool {
+        match self.token_vector[self.current_token] {
             tokens::TokenTypes::Delim(s) if s == token => true,
             _ => false,
         }

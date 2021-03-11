@@ -19,6 +19,9 @@ pub fn eval_expression<'a>(expression: parser::Expression) -> Result<object::Obj
             let evaluate_right = eval_expression(*right)?;
             return Ok(eval_infix_expression(operator, evaluate_left, evaluate_right));
         }
+        parser::Expression::IfExpr {condition, then, other} => {
+            return Ok(evaluate_if_condition(*condition, *then, other)?);
+        }
         _ => return Err("expected an expression to eval"),
     }
 }
@@ -90,6 +93,23 @@ fn eval_infix_expression(operator: tokens::TokenTypes, left: Objects, right: Obj
                 _ => return Objects::Boolean(false),
             }
         },
+        _ => return Objects::Boolean(false),
+    }
+}
+
+fn evaluate_if_condition<'a>(condition: parser::Expression, then: parser::Statement, other: Option<Box<parser::Statement>>) -> Result<Objects, &'a str> {
+    let obj_condition = eval_expression(condition.clone())?;
+    match obj_condition {
+        Objects::Boolean(true) => return Ok(return_if_condition(then)),
+        Objects::Boolean(false) => return Ok(return_if_condition(*other.unwrap())),
+        _ => return Err("evaluating if expression"),
+    }
+}
+
+fn return_if_condition(ifexpression: parser::Statement) -> Objects {
+    let st = eval_statement(ifexpression);
+    match st {
+        Ok(s) => return s,
         _ => return Objects::Boolean(false),
     }
 }
