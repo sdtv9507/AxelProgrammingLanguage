@@ -113,10 +113,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 index = final_index - 1;
             }
             '\x00' => {
-                println!("final?");
+                //Ignore this
             }
             '\n' => {
-                println!("line break?");
+                //Ignore this
             }
             _ => {
                 if is_valid_number(chr) == true {

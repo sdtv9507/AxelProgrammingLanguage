@@ -35,8 +35,8 @@ pub enum Expression {
         number: i32,
     },
 
-    StringLit {
-        number: i32,
+    IdentifierLit {
+        name: String,
     },
 
     BoolExp {
@@ -170,8 +170,14 @@ impl Parser {
     }
 
     fn parse_prefix_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
-        match self.token_vector[self.current_token] {
-            tokens::TokenTypes::NumbersInt(s) => return Ok(Expression::NumberLit { number: s }),
+        match &self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => {
+                return Ok(Expression::NumberLit { number: s.clone() })
+            }
+            tokens::TokenTypes::Identifier(s) => {
+                let name = s.clone();
+                return Ok(Expression::IdentifierLit { name });
+            }
             tokens::TokenTypes::Operator('-') => {
                 self.advance_tokens();
                 let parse_exp = self.expression_parser();

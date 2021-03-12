@@ -8,7 +8,7 @@ mod object;
 mod parser;
 mod tokens;
 
-use evaluate::eval_statement;
+use evaluate::Evaluator;
 
 use crate::parser::Parser;
 
@@ -67,10 +67,11 @@ fn main() {
         } else {
             let token = lexer::get_keywords(&input);
             let mut parser = Parser::new(token);
+            let mut evaluator = Evaluator::new();
             let result = parser.check_statement();
             match result {
                 Ok(_s) => {
-                    let statement = eval_statement(_s);
+                    let statement = evaluator.eval_statement(_s);
                     match statement {
                         Ok(s) => println!("Evaluation success: {}", s),
                         Err(e) => println!("Evaluation error: {}", e),
