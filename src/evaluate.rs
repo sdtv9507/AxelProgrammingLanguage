@@ -1,4 +1,4 @@
-use object::{Environment, Objects};
+use object::{Environment, Function, Objects};
 
 use crate::parser;
 use crate::{object, tokens};
@@ -9,7 +9,9 @@ pub struct Evaluator {
 
 impl Evaluator {
     pub fn new() -> Self {
-        Evaluator { environment: Environment::new() }
+        Evaluator {
+            environment: Environment::new(),
+        }
     }
 
     pub fn eval_statement<'a>(
@@ -87,14 +89,63 @@ impl Evaluator {
                 then,
                 other,
             } => {
-                return Ok(self.evaluate_if_condition(
-                    *condition,
-                    *then,
-                    other,
-                )?);
+                return Ok(self.evaluate_if_condition(*condition, *then, other)?);
             }
-            _ => return Err("expected an expression to eval"),
+            parser::Expression::FunctionExpr {
+                identifier,
+                parameters,
+                body,
+            } => {
+                let function = Function::new(parameters, body);
+                self.environment.add(identifier, Objects::Function(function.clone()));
+                return Ok(Objects::Function(function));
+            }
+            parser::Expression::CallExpr {identifier, parameters} => {
+                let val = self.environment.search(identifier);
+                let identifier;
+                match val {
+                    Some(s) => identifier = s.clone(),
+                    None => return Err("identifier not found"),
+                };
+                let param_values = self.eval_call_params(parameters)?;
+                
+                let mut func_names: Vec<String> = Vec::new();
+                let mut inner_environment;
+                let evaluated;
+                match identifier {
+                    Objects::Function(func) => {
+                        for i in func.parameters {
+                            func_names.push(i);
+                        }
+                        inner_environment = func.environment;
+                        evaluated = self.eval_statement(*func.body);
+                    }
+                    _ => return Err("object isn't a function"),
+                }
+
+                let size = func_names.len() - 1;
+                for i in 0..size {
+                    inner_environment.add(func_names[i].clone(), param_values[i].clone());
+                }
+
+                match evaluated {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
         }
+    }
+
+    fn eval_call_params<'a>(&mut self, parameters: Vec<parser::Expression>) -> Result<Vec<Objects>, &'a str> {
+        let mut result = Vec::new();
+        for arg in parameters {
+            let arg_eval = self.eval_expression(arg);
+            match arg_eval {
+                Ok(s) => result.push(s),
+                Err(e) => return Err(e),
+            }
+        }
+        return Ok(result);
     }
 
     fn eval_bang_operator<'a>(&mut self, obj: Objects) -> Result<Objects, &'a str> {

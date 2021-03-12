@@ -8,7 +8,7 @@ pub struct Parser {
     next_token: usize,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     VarStatement {
         name: String,
@@ -29,7 +29,7 @@ pub enum Statement {
     },
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     NumberLit {
         number: i32,
@@ -62,8 +62,8 @@ pub enum Expression {
     },
 
     CallExpr {
-        name: String,
-        expressions: Vec<Expression>,
+        identifier: String,
+        parameters: Vec<Expression>,
     },
 
     Prefix {
@@ -218,18 +218,18 @@ impl Parser {
     }
 
     fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
-        let name;
+        let identifier;
         match &self.token_vector[self.current_token] {
-            tokens::TokenTypes::Identifier(s) => name = s.clone(),
-            _ => return Err("Error, expected an identifier"),
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
+            _ => return Err("expected an identifier"),
         }
 
         if self.match_operator('(') == false {
-            return Err("Error, expected (");
+            return Err("expected (");
         }
 
         self.advance_tokens();
-        let mut expressions: Vec<Expression> = Vec::new();
+        let mut parameters: Vec<Expression> = Vec::new();
         while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
             let left_op;
             let parsed_prefix = self.parse_prefix_expressions();
@@ -239,7 +239,7 @@ impl Parser {
             }
             let result_op = self.infix_expression_parser(0, left_op);
             match result_op {
-                Ok(s) => expressions.push(s.clone()),
+                Ok(s) => parameters.push(s.clone()),
                 Err(e) => return Err(e),
             }
 
@@ -249,7 +249,7 @@ impl Parser {
             }
         }
 
-        Ok(Expression::CallExpr { name, expressions })
+        Ok(Expression::CallExpr { identifier, parameters })
     }
 
     fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
@@ -288,6 +288,9 @@ impl Parser {
         if self.match_delim('{') == false {
             return Err("Error, expected {");
         }
+
+        self.advance_tokens();
+        self.advance_tokens();
 
         let statement_result = self.parse_statement();
         let statement;
