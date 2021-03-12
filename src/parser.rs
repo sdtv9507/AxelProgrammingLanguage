@@ -148,7 +148,7 @@ impl Parser {
                 Ok(false_expression)
             }
 
-            tokens::TokenTypes::Identifier(s) => {
+            tokens::TokenTypes::Identifier(_s) => {
                 let call_expression = self.parse_call();
                 match call_expression {
                     Ok(s) => return Ok(s),
@@ -177,6 +177,9 @@ impl Parser {
             tokens::TokenTypes::Identifier(s) => {
                 let name = s.clone();
                 return Ok(Expression::IdentifierLit { name });
+            }
+            tokens::TokenTypes::Operator('(') => {
+                return self.parse_grouped_expression();
             }
             tokens::TokenTypes::Operator('-') => {
                 self.advance_tokens();
@@ -635,12 +638,16 @@ impl Parser {
             Ok(s) => left_op = s,
             Err(e) => return Err(e),
         }
+        self.advance_tokens();
         while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
-                _ => return Err("error, expected a number"),
+                Err(e) => return Err(e),
             };
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
+                break;
+            }
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
         }
 
@@ -653,7 +660,7 @@ impl Parser {
             tokens::TokenTypes::Operator('-') => 2,
             tokens::TokenTypes::Operator('*') => 3,
             tokens::TokenTypes::Operator('/') => 3,
-            tokens::TokenTypes::Compare(s) => 1,
+            tokens::TokenTypes::Compare(_s) => 1,
             _ => 0,
         }
     }
