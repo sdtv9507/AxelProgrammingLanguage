@@ -68,11 +68,15 @@ fn main() {
             let token = lexer::get_keywords(&input);
             let mut parser = Parser::new(token);
             let mut evaluator = Evaluator::new();
-            let result = parser.check_statement();
+            let result = parser.parse_token_line();
             match result {
-                Ok(_s) => {
-                    let statement = evaluator.eval_statement(_s);
-                    match statement {
+                Ok(s) => {
+                    let mut obj_vector = Vec::new();
+                    for st in s {
+                        obj_vector.push(evaluator.eval_statement(st));
+                    }
+                    let len = obj_vector.len() - 1;
+                    match &obj_vector[len] {
                         Ok(s) => println!("Evaluation success: {}", s),
                         Err(e) => println!("Evaluation error: {}", e),
                     }

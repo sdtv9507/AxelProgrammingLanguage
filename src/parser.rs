@@ -81,6 +81,23 @@ impl Parser {
         }
     }
 
+    pub fn parse_token_line<'a>(&mut self) -> Result<Vec<Statement>, &'a str> {
+        let size = self.token_vector.len();
+        let mut final_vector = Vec::new();
+        while self.current_token < size {
+            let statement = self.check_statement();
+            match statement {
+                Ok(s) => final_vector.push(s),
+                Err(e) => return Err(e),
+            }
+            self.advance_tokens();
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::EndOfLine {
+                break;
+            }
+        }
+        return Ok(final_vector);
+    }
+
     pub fn check_statement<'a>(&mut self) -> Result<Statement, &'a str> {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::Var) => {
@@ -231,25 +248,28 @@ impl Parser {
         self.advance_tokens();
         let mut parameters: Vec<Expression> = Vec::new();
         while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
+            self.advance_tokens();
             let left_op;
             let parsed_prefix = self.parse_prefix_expressions();
             match parsed_prefix {
                 Ok(s) => left_op = s,
                 Err(e) => return Err(e),
             }
-            let result_op = self.infix_expression_parser(0, left_op);
-            match result_op {
-                Ok(s) => parameters.push(s.clone()),
-                Err(e) => return Err(e),
-            }
 
+            self.advance_tokens();
             if &self.token_vector[self.current_token] == &tokens::TokenTypes::Comma {
-                self.advance_tokens();
-                self.advance_tokens();
+                let result_op = self.infix_expression_parser(0, left_op);
+                match result_op {
+                    Ok(s) => parameters.push(s.clone()),
+                    Err(e) => return Err(e),
+                }
             }
         }
 
-        Ok(Expression::CallExpr { identifier, parameters })
+        Ok(Expression::CallExpr {
+            identifier,
+            parameters,
+        })
     }
 
     fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
@@ -470,14 +490,14 @@ impl Parser {
     fn parse_variable<'a>(&mut self) -> Result<Statement, &'a str> {
         let identifier: String;
         self.advance_tokens();
-        match &self.token_vector[self.next_token] {
-            tokens::TokenTypes::Operator('=') => identifier = "=".to_string(),
-            tokens::TokenTypes::EndOfLine => {
-                return Err("expected = sign");
-            }
+        match &self.token_vector[self.current_token] {
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
             _ => {
                 return Err("expected an identifier");
             }
+        }
+        if self.match_operator('=') == false {
+            return Err("expected a = sign, variable must be initialized");
         }
         self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {

@@ -63,3 +63,12 @@ impl fmt::Display for Objects {
         }
     }
 }
+
+impl fmt::Display for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (i, j) in &self.value {
+            write!(f, "{0}: {1}", i, j);
+        }
+        return Ok(());
+    }
+}

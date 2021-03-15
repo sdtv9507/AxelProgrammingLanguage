@@ -55,7 +55,7 @@ impl Evaluator {
                 let val = self.environment.search(name);
                 match val {
                     Some(s) => return Ok(s.clone()),
-                    None => return Err("identifier not found"),
+                    None => return Err("identifier {name} not found"),
                 }
             }
             parser::Expression::Prefix { operator, right } => {
