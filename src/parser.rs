@@ -45,7 +45,7 @@ pub enum Expression {
 
     IfExpr {
         condition: Box<Expression>,
-        then: Box<Statement>,
+        then: Box<Vec<Statement>>,
         other: Option<Box<Statement>>,
     },
 
@@ -186,308 +186,9 @@ impl Parser {
         }
     }
 
-    fn parse_prefix_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
-        match &self.token_vector[self.current_token] {
-            tokens::TokenTypes::NumbersInt(s) => {
-                return Ok(Expression::NumberLit { number: s.clone() })
-            }
-            tokens::TokenTypes::Identifier(s) => {
-                let name = s.clone();
-                return Ok(Expression::IdentifierLit { name });
-            }
-            tokens::TokenTypes::Operator('(') => {
-                return self.parse_grouped_expression();
-            }
-            tokens::TokenTypes::Operator('-') => {
-                self.advance_tokens();
-                let parse_exp = self.expression_parser();
-                let expression;
-                match parse_exp {
-                    Ok(s) => expression = s,
-                    Err(e) => return Err(e),
-                }
-                return Ok(Expression::Prefix {
-                    operator: tokens::TokenTypes::Operator('-'),
-                    right: Box::new(expression),
-                });
-            }
-            tokens::TokenTypes::Bang => {
-                self.advance_tokens();
-                let parse_exp = self.expression_parser();
-                let expression;
-                match parse_exp {
-                    Ok(s) => expression = s,
-                    Err(e) => return Err(e),
-                }
-                return Ok(Expression::Prefix {
-                    operator: tokens::TokenTypes::Bang,
-                    right: Box::new(expression),
-                });
-            }
-            tokens::TokenTypes::Keywords(tokens::Keywords::True) => {
-                return Ok(Expression::BoolExp { value: true })
-            }
-            tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
-                return Ok(Expression::BoolExp { value: false })
-            }
-            _ => return Err("expected an expression"),
-        }
-    }
-
-    fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
-        let identifier;
-        match &self.token_vector[self.current_token] {
-            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
-            _ => return Err("expected an identifier"),
-        }
-
-        if self.match_operator('(') == false {
-            return Err("expected (");
-        }
-
-        self.advance_tokens();
-        let mut parameters: Vec<Expression> = Vec::new();
-        while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
-            self.advance_tokens();
-            let left_op;
-            let parsed_prefix = self.parse_prefix_expressions();
-            match parsed_prefix {
-                Ok(s) => left_op = s,
-                Err(e) => return Err(e),
-            }
-
-            self.advance_tokens();
-            if &self.token_vector[self.current_token] != &tokens::TokenTypes::Comma {
-                let result_op = self.infix_expression_parser(0, left_op);
-                match result_op {
-                    Ok(s) => parameters.push(s.clone()),
-                    Err(e) => return Err(e),
-                }
-            }else{
-                parameters.push(left_op);
-            }
-        }
-
-        Ok(Expression::CallExpr {
-            identifier,
-            parameters,
-        })
-    }
-
-    fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
-        let identifier: String;
-        match &self.token_vector[self.next_token] {
-            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
-            _ => return Err("Error, expected an identifier"),
-        }
-
-        self.advance_tokens();
-
-        if self.match_operator('(') == false {
-            return Err("Error, expected (");
-        }
-        self.advance_tokens();
-
-        let mut parameters: Vec<String> = Vec::new();
-
-        while self.match_operator(')') == false {
-            match &self.token_vector[self.next_token] {
-                tokens::TokenTypes::Identifier(s) => parameters.push(s.clone()),
-                _ => return Err("Error, expected an identifier"),
-            }
-            self.advance_tokens();
-
-            if self.match_operator(')') == false {
-                match &self.token_vector[self.next_token] {
-                    tokens::TokenTypes::Comma => self.advance_tokens(),
-                    _ => return Err("Error, expected an identifier"),
-                }
-            }
-        }
-
-        self.advance_tokens();
-
-        if self.match_delim('{') == false {
-            return Err("Error, expected {");
-        }
-
-        self.advance_tokens();
-        self.advance_tokens();
-
-        let statement_result = self.parse_statement();
-        let statement;
-
-        match statement_result {
-            Ok(v) => statement = Box::new(v),
-            _ => return Err("error parsing statement"),
-        }
-
-        if self.match_delim('}') == false {
-            return Err("Error, expected }");
-        }
-
-        self.advance_tokens();
-        Ok(Expression::FunctionExpr {
-            identifier: identifier,
-            parameters: parameters,
-            body: statement,
-        })
-    }
-
-    fn parse_if<'a>(&mut self) -> Result<Expression, &'a str> {
-        if self.match_operator('(') == false {
-            return Err("Error, expected (");
-        }
-        self.advance_tokens();
-        self.advance_tokens();
-
-        let condition_result = self.expression_parser();
-        let condition;
-        match condition_result {
-            Ok(v) => condition = Box::new(v),
-            Err(e) => return Err(e),
-        }
-
-        if self.match_current_operator(')') == false {
-            return Err("Error, expected )");
-        }
-
-        self.advance_tokens();
-
-        if self.match_current_delim('{') == false {
-            return Err("Error, expected {");
-        }
-
-        self.advance_tokens();
-
-        let consequence_result = self.parse_statement();
-        let consequence;
-
-        match consequence_result {
-            Ok(v) => consequence = Box::new(v),
-            Err(e) => return Err(e),
-        }
-
-        self.advance_tokens();
-        if self.match_current_delim('}') == false {
-            return Err("Error, expected }");
-        }
-
-        let then: Option<Box<Statement>>;
-        match self.token_vector[self.next_token] {
-            tokens::TokenTypes::Keywords(tokens::Keywords::Else) => {
-                self.advance_tokens();
-                self.advance_tokens();
-                self.advance_tokens();
-                let then_result = self.parse_statement();
-                let then_box;
-                match then_result {
-                    Ok(v) => then_box = Box::new(v),
-                    Err(e) => return Err(e),
-                }
-
-                self.advance_tokens();
-                if self.match_current_delim('}') == false {
-                    return Err("Error, expected }");
-                }
-                then = Some(then_box);
-            }
-            _ => {
-                then = None;
-            }
-        }
-        Ok(Expression::IfExpr {
-            condition: condition,
-            then: consequence,
-            other: then,
-        })
-    }
-
-    fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
-        let mut statement: Statement;
-
-        loop {
-            let check_statement = self.check_statement();
-            match check_statement {
-                Ok(s) => statement = s,
-                Err(e) => return Err(e),
-            }
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
-                break;
-            }
-            self.advance_tokens();
-        }
-
-        Ok(statement)
-    }
-
-    fn expression_parser<'a>(&mut self) -> Result<Expression, &'a str> {
-        let mut precedence = 0;
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon
-            || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
-        {
-            let result_op = self.infix_expression_parser(precedence, left_op);
-            match result_op {
-                Ok(v) => left_op = v,
-                Err(e) => return Err(e),
-            };
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
-                || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
-            {
-                break;
-            }
-            precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
-        }
-
-        Ok(left_op)
-    }
-
     fn advance_tokens(&mut self) {
         self.current_token = self.next_token;
         self.next_token += 1;
-    }
-
-    fn parse_return<'a>(&mut self) -> Result<Statement, &'a str> {
-        if &self.token_vector.len() <= &self.next_token {
-            return Err("expected an expression");
-        }
-        let mut result_op: Expression;
-        self.advance_tokens();
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-            return Ok(Statement::ReturnStatement {
-                value: Box::from(left_op),
-            });
-        }
-        loop {
-            if self.token_vector.len() <= self.next_token {
-                return Err("token overflow on return parse");
-            }
-            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("reached end of line without semicolon on return parse");
-            }
-            result_op = self.infix_expression_parser(0, left_op)?;
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-                break;
-            }
-            left_op = result_op;
-        }
-        Ok(Statement::ReturnStatement {
-            value: Box::from(result_op),
-        })
     }
 
     fn parse_variable<'a>(&mut self) -> Result<Statement, &'a str> {
@@ -590,6 +291,316 @@ impl Parser {
             name: identifier,
             value: Box::from(result_op),
         })
+    }
+
+    fn parse_return<'a>(&mut self) -> Result<Statement, &'a str> {
+        if &self.token_vector.len() <= &self.next_token {
+            return Err("expected an expression");
+        }
+        let mut result_op: Expression;
+        self.advance_tokens();
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
+        }
+        self.advance_tokens();
+        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
+            return Ok(Statement::ReturnStatement {
+                value: Box::from(left_op),
+            });
+        }
+        loop {
+            if self.token_vector.len() <= self.next_token {
+                return Err("token overflow on return parse");
+            }
+            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
+                return Err("reached end of line without semicolon on return parse");
+            }
+            result_op = self.infix_expression_parser(0, left_op)?;
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
+                break;
+            }
+            left_op = result_op;
+        }
+        Ok(Statement::ReturnStatement {
+            value: Box::from(result_op),
+        })
+    }
+
+    fn parse_if<'a>(&mut self) -> Result<Expression, &'a str> {
+        if self.match_operator('(') == false {
+            return Err("Error, expected (");
+        }
+        self.advance_tokens();
+        self.advance_tokens();
+
+        let condition_result = self.expression_parser();
+        let condition;
+        match condition_result {
+            Ok(v) => condition = Box::new(v),
+            Err(e) => return Err(e),
+        }
+
+        if self.match_current_operator(')') == false {
+            return Err("Error, expected )");
+        }
+
+        self.advance_tokens();
+
+        if self.match_current_delim('{') == false {
+            return Err("Error, expected {");
+        }
+
+        self.advance_tokens();
+
+        let mut consequence_result: Vec<Statement> = Vec::new();
+        
+        loop {
+            let check_statement = self.check_statement();
+            match check_statement {
+                Ok(s) => consequence_result.push(s),
+                Err(e) => return Err(e),
+            }
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}')
+            {
+                break;
+            }
+            self.advance_tokens();
+        }
+
+        let consequence = Box::new(consequence_result);
+
+        self.advance_tokens();
+        if self.match_current_delim('}') == false {
+            return Err("Error, expected }");
+        }
+
+        let then: Option<Box<Statement>>;
+        match self.token_vector[self.next_token] {
+            tokens::TokenTypes::Keywords(tokens::Keywords::Else) => {
+                self.advance_tokens();
+                self.advance_tokens();
+                self.advance_tokens();
+                let then_result = self.parse_statement();
+                let then_box;
+                match then_result {
+                    Ok(v) => then_box = Box::new(v),
+                    Err(e) => return Err(e),
+                }
+
+                self.advance_tokens();
+                if self.match_current_delim('}') == false {
+                    return Err("Error, expected }");
+                }
+                then = Some(then_box);
+            }
+            _ => {
+                then = None;
+            }
+        }
+        Ok(Expression::IfExpr {
+            condition: condition,
+            then: consequence,
+            other: then,
+        })
+    }
+
+    fn parse_prefix_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
+        match &self.token_vector[self.current_token] {
+            tokens::TokenTypes::NumbersInt(s) => {
+                return Ok(Expression::NumberLit { number: s.clone() })
+            }
+            tokens::TokenTypes::Identifier(s) => {
+                let name = s.clone();
+                return Ok(Expression::IdentifierLit { name });
+            }
+            tokens::TokenTypes::Operator('(') => {
+                return self.parse_grouped_expression();
+            }
+            tokens::TokenTypes::Operator('-') => {
+                self.advance_tokens();
+                let parse_exp = self.expression_parser();
+                let expression;
+                match parse_exp {
+                    Ok(s) => expression = s,
+                    Err(e) => return Err(e),
+                }
+                return Ok(Expression::Prefix {
+                    operator: tokens::TokenTypes::Operator('-'),
+                    right: Box::new(expression),
+                });
+            }
+            tokens::TokenTypes::Bang => {
+                self.advance_tokens();
+                let parse_exp = self.expression_parser();
+                let expression;
+                match parse_exp {
+                    Ok(s) => expression = s,
+                    Err(e) => return Err(e),
+                }
+                return Ok(Expression::Prefix {
+                    operator: tokens::TokenTypes::Bang,
+                    right: Box::new(expression),
+                });
+            }
+            tokens::TokenTypes::Keywords(tokens::Keywords::True) => {
+                return Ok(Expression::BoolExp { value: true })
+            }
+            tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
+                return Ok(Expression::BoolExp { value: false })
+            }
+            _ => return Err("expected an expression"),
+        }
+    }
+
+    fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
+        let identifier;
+        match &self.token_vector[self.current_token] {
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
+            _ => return Err("expected an identifier"),
+        }
+
+        if self.match_operator('(') == false {
+            return Err("expected (");
+        }
+
+        self.advance_tokens();
+        let mut parameters: Vec<Expression> = Vec::new();
+        while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
+            self.advance_tokens();
+            let left_op;
+            let parsed_prefix = self.parse_prefix_expressions();
+            match parsed_prefix {
+                Ok(s) => left_op = s,
+                Err(e) => return Err(e),
+            }
+
+            self.advance_tokens();
+            if &self.token_vector[self.current_token] != &tokens::TokenTypes::Comma {
+                let result_op = self.infix_expression_parser(0, left_op);
+                match result_op {
+                    Ok(s) => parameters.push(s.clone()),
+                    Err(e) => return Err(e),
+                }
+            } else {
+                parameters.push(left_op);
+            }
+        }
+
+        Ok(Expression::CallExpr {
+            identifier,
+            parameters,
+        })
+    }
+
+    fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
+        let identifier: String;
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
+            _ => return Err("Error, expected an identifier"),
+        }
+
+        self.advance_tokens();
+
+        if self.match_operator('(') == false {
+            return Err("Error, expected (");
+        }
+        self.advance_tokens();
+
+        let mut parameters: Vec<String> = Vec::new();
+
+        while self.match_operator(')') == false {
+            match &self.token_vector[self.next_token] {
+                tokens::TokenTypes::Identifier(s) => parameters.push(s.clone()),
+                _ => return Err("Error, expected an identifier"),
+            }
+            self.advance_tokens();
+
+            if self.match_operator(')') == false {
+                match &self.token_vector[self.next_token] {
+                    tokens::TokenTypes::Comma => self.advance_tokens(),
+                    _ => return Err("Error, expected an identifier"),
+                }
+            }
+        }
+
+        self.advance_tokens();
+
+        if self.match_delim('{') == false {
+            return Err("Error, expected {");
+        }
+
+        self.advance_tokens();
+        self.advance_tokens();
+
+        let statement_result = self.parse_statement();
+        let statement;
+
+        match statement_result {
+            Ok(v) => statement = Box::new(v),
+            _ => return Err("error parsing statement"),
+        }
+
+        if self.match_delim('}') == false {
+            return Err("Error, expected }");
+        }
+
+        self.advance_tokens();
+        Ok(Expression::FunctionExpr {
+            identifier: identifier,
+            parameters: parameters,
+            body: statement,
+        })
+    }
+
+    fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
+        let mut statement: Statement;
+
+        loop {
+            let check_statement = self.check_statement();
+            match check_statement {
+                Ok(s) => statement = s,
+                Err(e) => return Err(e),
+            }
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}')
+                || &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
+            {
+                break;
+            }
+            self.advance_tokens();
+        }
+
+        Ok(statement)
+    }
+
+    fn expression_parser<'a>(&mut self) -> Result<Expression, &'a str> {
+        let mut precedence = 0;
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
+        }
+        self.advance_tokens();
+        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon
+            || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
+        {
+            let result_op = self.infix_expression_parser(precedence, left_op);
+            match result_op {
+                Ok(v) => left_op = v,
+                Err(e) => return Err(e),
+            };
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
+                || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
+            {
+                break;
+            }
+            precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
+        }
+
+        Ok(left_op)
     }
 
     fn infix_expression_parser<'a>(

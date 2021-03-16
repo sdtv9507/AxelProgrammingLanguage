@@ -73,7 +73,13 @@ fn main() {
                 Ok(s) => {
                     let mut obj_vector = Vec::new();
                     for st in s {
-                        obj_vector.push(evaluator.eval_statement(st));
+                        let comp = st.clone();
+                        let eval = evaluator.eval_statement(st);
+                        obj_vector.push(eval);
+                        match comp {
+                            parser::Statement::ReturnStatement { value: _ } => break,
+                            _ => continue,
+                        }
                     }
                     let len = obj_vector.len() - 1;
                     match &obj_vector[len] {

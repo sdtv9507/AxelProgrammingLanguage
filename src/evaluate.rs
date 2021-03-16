@@ -127,9 +127,10 @@ impl Evaluator {
                         }
                         //inner_environment = func.environment;
                         for i in 0..func_names.len() {
-                            self.environment.add(func_names[i].clone(), param_values[i].clone());
+                            self.environment
+                                .add(func_names[i].clone(), param_values[i].clone());
                         }
-        
+
                         evaluated = self.eval_statement(*func.body);
                     }
                     _ => return Err("object isn't a function"),
@@ -236,12 +237,30 @@ impl Evaluator {
     fn evaluate_if_condition<'a>(
         &mut self,
         condition: parser::Expression,
-        then: parser::Statement,
+        then: Vec<parser::Statement>,
         other: Option<Box<parser::Statement>>,
     ) -> Result<Objects, &'a str> {
         let obj_condition = self.eval_expression(condition.clone())?;
         match obj_condition {
-            Objects::Boolean(true) => return Ok(self.return_if_condition(then)),
+            Objects::Boolean(true) => {
+                let mut evaluated_statement = None;
+                for statement in then {
+                    evaluated_statement = Some(self.return_if_condition(statement.clone()));
+                    match statement {
+                        parser::Statement::ReturnStatement {value: _} => {
+                            match evaluated_statement {
+                                Some(s) => return Ok(s),
+                                None => return Err("error evaluating if expressions"),
+                            }
+                        },
+                        _ => continue,
+                    }
+                }
+                match evaluated_statement {
+                    Some(s) => return Ok(s),
+                    None => return Err("error evaluating if expressions"),
+                }
+            },
             Objects::Boolean(false) => match other {
                 Some(s) => return Ok(self.return_if_condition(*s)),
                 _ => return Ok(Objects::Boolean(false)),
