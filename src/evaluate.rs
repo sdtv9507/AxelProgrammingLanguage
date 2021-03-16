@@ -55,9 +55,10 @@ impl Evaluator {
                 let val = self.environment.search(name);
                 match val {
                     Some(s) => return Ok(s.clone()),
-                    None => return Err("identifier {name} not found"),
+                    None => return Err("identifier not found"),
                 }
             }
+
             parser::Expression::Prefix { operator, right } => {
                 let evaluate_right = self.eval_expression(*right);
                 match evaluate_right {
@@ -71,6 +72,7 @@ impl Evaluator {
                     Err(e) => return Err(e),
                 }
             }
+
             parser::Expression::InfixOp {
                 left,
                 right,
@@ -84,6 +86,7 @@ impl Evaluator {
                     Err(e) => return Err(e),
                 }
             }
+
             parser::Expression::IfExpr {
                 condition,
                 then,
@@ -97,35 +100,39 @@ impl Evaluator {
                 body,
             } => {
                 let function = Function::new(parameters, body);
-                self.environment.add(identifier, Objects::Function(function.clone()));
+                self.environment
+                    .add(identifier, Objects::Function(function.clone()));
                 return Ok(Objects::Function(function));
             }
-            parser::Expression::CallExpr {identifier, parameters} => {
+
+            parser::Expression::CallExpr {
+                identifier,
+                parameters,
+            } => {
                 let val = self.environment.search(identifier);
                 let identifier;
                 match val {
                     Some(s) => identifier = s.clone(),
-                    None => return Err("identifier not found"),
+                    None => return Err("function identifier not found"),
                 };
                 let param_values = self.eval_call_params(parameters)?;
-                
+
                 let mut func_names: Vec<String> = Vec::new();
-                let mut inner_environment;
+                //let mut inner_environment;
                 let evaluated;
                 match identifier {
                     Objects::Function(func) => {
                         for i in func.parameters {
                             func_names.push(i);
                         }
-                        inner_environment = func.environment;
+                        //inner_environment = func.environment;
+                        for i in 0..func_names.len() {
+                            self.environment.add(func_names[i].clone(), param_values[i].clone());
+                        }
+        
                         evaluated = self.eval_statement(*func.body);
                     }
                     _ => return Err("object isn't a function"),
-                }
-
-                let size = func_names.len() - 1;
-                for i in 0..size {
-                    inner_environment.add(func_names[i].clone(), param_values[i].clone());
                 }
 
                 match evaluated {
@@ -136,7 +143,10 @@ impl Evaluator {
         }
     }
 
-    fn eval_call_params<'a>(&mut self, parameters: Vec<parser::Expression>) -> Result<Vec<Objects>, &'a str> {
+    fn eval_call_params<'a>(
+        &mut self,
+        parameters: Vec<parser::Expression>,
+    ) -> Result<Vec<Objects>, &'a str> {
         let mut result = Vec::new();
         for arg in parameters {
             let arg_eval = self.eval_expression(arg);

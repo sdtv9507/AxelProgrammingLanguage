@@ -257,12 +257,14 @@ impl Parser {
             }
 
             self.advance_tokens();
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Comma {
+            if &self.token_vector[self.current_token] != &tokens::TokenTypes::Comma {
                 let result_op = self.infix_expression_parser(0, left_op);
                 match result_op {
                     Ok(s) => parameters.push(s.clone()),
                     Err(e) => return Err(e),
                 }
+            }else{
+                parameters.push(left_op);
             }
         }
 
@@ -324,6 +326,7 @@ impl Parser {
             return Err("Error, expected }");
         }
 
+        self.advance_tokens();
         Ok(Expression::FunctionExpr {
             identifier: identifier,
             parameters: parameters,

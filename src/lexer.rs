@@ -179,7 +179,6 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                     }
                     index = final_index - 1;
                 } else {
-                    println!("{}", chr);
                     token_vector.push(tokens::TokenTypes::Illegal);
                 }
             }
