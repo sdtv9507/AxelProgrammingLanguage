@@ -46,7 +46,7 @@ pub enum Expression {
     IfExpr {
         condition: Box<Expression>,
         then: Box<Vec<Statement>>,
-        other: Option<Box<Statement>>,
+        other: Option<Box<Vec<Statement>>>,
     },
 
     FunctionExpr {
@@ -356,15 +356,14 @@ impl Parser {
         self.advance_tokens();
 
         let mut consequence_result: Vec<Statement> = Vec::new();
-        
+
         loop {
             let check_statement = self.check_statement();
             match check_statement {
                 Ok(s) => consequence_result.push(s),
                 Err(e) => return Err(e),
             }
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}')
-            {
+            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
                 break;
             }
             self.advance_tokens();
@@ -377,19 +376,26 @@ impl Parser {
             return Err("Error, expected }");
         }
 
-        let then: Option<Box<Statement>>;
+        let then: Option<Box<Vec<Statement>>>;
         match self.token_vector[self.next_token] {
             tokens::TokenTypes::Keywords(tokens::Keywords::Else) => {
                 self.advance_tokens();
                 self.advance_tokens();
                 self.advance_tokens();
-                let then_result = self.parse_statement();
-                let then_box;
-                match then_result {
-                    Ok(v) => then_box = Box::new(v),
-                    Err(e) => return Err(e),
-                }
+                let mut then_result = Vec::new();
 
+                loop {
+                    let check_statement = self.check_statement();
+                    match check_statement {
+                        Ok(s) => then_result.push(s),
+                        Err(e) => return Err(e),
+                    }
+                    if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
+                        break;
+                    }
+                    self.advance_tokens();
+                }
+                let then_box = Box::new(then_result);
                 self.advance_tokens();
                 if self.match_current_delim('}') == false {
                     return Err("Error, expected }");

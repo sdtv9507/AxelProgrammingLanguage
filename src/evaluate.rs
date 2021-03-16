@@ -238,7 +238,7 @@ impl Evaluator {
         &mut self,
         condition: parser::Expression,
         then: Vec<parser::Statement>,
-        other: Option<Box<parser::Statement>>,
+        other: Option<Box<Vec<parser::Statement>>>,
     ) -> Result<Objects, &'a str> {
         let obj_condition = self.eval_expression(condition.clone())?;
         match obj_condition {
@@ -247,12 +247,12 @@ impl Evaluator {
                 for statement in then {
                     evaluated_statement = Some(self.return_if_condition(statement.clone()));
                     match statement {
-                        parser::Statement::ReturnStatement {value: _} => {
+                        parser::Statement::ReturnStatement { value: _ } => {
                             match evaluated_statement {
                                 Some(s) => return Ok(s),
                                 None => return Err("error evaluating if expressions"),
                             }
-                        },
+                        }
                         _ => continue,
                     }
                 }
@@ -260,9 +260,28 @@ impl Evaluator {
                     Some(s) => return Ok(s),
                     None => return Err("error evaluating if expressions"),
                 }
-            },
+            }
             Objects::Boolean(false) => match other {
-                Some(s) => return Ok(self.return_if_condition(*s)),
+                Some(other_statement) => {
+                    let mut evaluated_statement = None;
+                    for statement in *other_statement {
+                        evaluated_statement = Some(self.return_if_condition(statement.clone()));
+                        match statement {
+                            parser::Statement::ReturnStatement { value: _ } => {
+                                match evaluated_statement {
+                                    Some(t) => return Ok(t),
+                                    None => return Err("error evaluating if expressions"),
+                                }
+                            }
+                            _ => continue,
+                        }
+                    }
+                    match evaluated_statement {
+                        Some(t) => return Ok(t),
+                        None => return Err("error evaluating if expressions"),
+                    }
+                    //return Ok(self.return_if_condition(*s));
+                }
                 _ => return Ok(Objects::Boolean(false)),
             },
             _ => return Err("evaluating if expression"),
