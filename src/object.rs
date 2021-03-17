@@ -5,6 +5,7 @@ use crate::parser;
 #[derive(Debug, Clone)]
 pub enum Objects {
     Integer(i32),
+    String(String),
     Boolean(bool),
     Function(Function),
 }
@@ -58,6 +59,7 @@ impl fmt::Display for Objects {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Objects::Integer(i) => write!(f, "Integer: {}", i),
+            Objects::String(s) => write!(f, "String: {}", s),
             Objects::Boolean(b) => write!(f, "Boolean: {}", b),
             Objects::Function(_s) => write!(f, "Function"),
         }
@@ -67,7 +69,7 @@ impl fmt::Display for Objects {
 impl fmt::Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (i, j) in &self.value {
-            write!(f, "{0}: {1}", i, j);
+            write!(f, "{0}: {1}", i, j)?;
         }
         return Ok(());
     }

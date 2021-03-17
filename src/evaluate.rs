@@ -48,7 +48,10 @@ impl Evaluator {
     ) -> Result<object::Objects, &'a str> {
         match expression {
             parser::Expression::NumberLit { number } => {
-                return Ok(object::Objects::Integer(number))
+                return Ok(object::Objects::Integer(number));
+            }
+            parser::Expression::StringLit { string } => {
+                return Ok(object::Objects::String(string));
             }
             parser::Expression::BoolExp { value } => return Ok(object::Objects::Boolean(value)),
             parser::Expression::IdentifierLit { name } => {
@@ -237,6 +240,10 @@ impl Evaluator {
                 }
                 _ => return Err("unknown operator"),
             },
+            (Objects::String(s), Objects::String(t)) => match operator {
+                tokens::TokenTypes::Operator('+') => return Ok(Objects::String(s + &t)),
+                _ => return Err("unknown operator"),
+            }
             _ => return Err("operand type mismatch"),
         }
     }
