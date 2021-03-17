@@ -104,7 +104,7 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         break;
                     }
                 }
-                let string = &text_vec[index..final_index]
+                let string = &text_vec[index+1..final_index-1]
                     .iter()
                     .collect::<String>()
                     .to_string();
