@@ -52,7 +52,7 @@ pub enum Expression {
     FunctionExpr {
         identifier: String,
         parameters: Vec<String>,
-        body: Box<Statement>,
+        body: Box<Vec<Statement>>,
     },
 
     InfixOp {
@@ -382,7 +382,7 @@ impl Parser {
                 self.advance_tokens();
                 self.advance_tokens();
                 self.advance_tokens();
-                let mut then_result = Vec::new();
+                /*let mut then_result = Vec::new();
 
                 loop {
                     let check_statement = self.check_statement();
@@ -394,8 +394,8 @@ impl Parser {
                         break;
                     }
                     self.advance_tokens();
-                }
-                let then_box = Box::new(then_result);
+                }*/
+                let then_box = Box::new(self.parse_statement()?);
                 self.advance_tokens();
                 if self.match_current_delim('}') == false {
                     return Err("Error, expected }");
@@ -461,6 +461,72 @@ impl Parser {
         }
     }
 
+    fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
+        let identifier: String;
+        match &self.token_vector[self.next_token] {
+            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
+            _ => return Err("Error, expected an identifier"),
+        }
+
+        self.advance_tokens();
+        self.advance_tokens();
+
+        if self.match_current_operator('(') == false {
+            return Err("Error, expected (");
+        }
+        self.advance_tokens();
+
+        let mut parameters: Vec<String> = Vec::new();
+
+        while self.match_current_operator(')') == false {
+            match &self.token_vector[self.current_token] {
+                tokens::TokenTypes::Identifier(s) => parameters.push(s.clone()),
+                _ => return Err("expected an identifier"),
+            }
+            self.advance_tokens();
+
+            if self.match_current_operator(')') == false {
+                match &self.token_vector[self.current_token] {
+                    tokens::TokenTypes::Comma => self.advance_tokens(),
+                    _ => return Err("expected a comma"),
+                }
+            }
+        }
+
+        self.advance_tokens();
+
+        if self.match_current_delim('{') == false {
+            return Err("Error, expected {");
+        }
+
+        self.advance_tokens();
+
+        let statement_result = self.parse_statement();
+        let statement;
+
+        match statement_result {
+            Ok(v) => statement = Box::new(v),
+            _ => return Err("error parsing statement"),
+        }
+
+        self.advance_tokens();
+        if self.match_current_delim('}') == false {
+            return Err("Error, expected }");
+        }
+
+        Ok(Expression::FunctionExpr {
+            identifier: identifier,
+            parameters: parameters,
+            body: statement,
+        })
+    }
+
+    fn parse_boolean(&mut self) -> Expression {
+        let boolean = self.token_vector[self.current_token]
+            == tokens::TokenTypes::Keywords(tokens::Keywords::True);
+        Expression::BoolExp { value: boolean }
+    }
+
     fn parse_call<'a>(&mut self) -> Result<Expression, &'a str> {
         let identifier;
         match &self.token_vector[self.current_token] {
@@ -501,73 +567,13 @@ impl Parser {
         })
     }
 
-    fn parse_function<'a>(&mut self) -> Result<Expression, &'a str> {
-        let identifier: String;
-        match &self.token_vector[self.next_token] {
-            tokens::TokenTypes::Identifier(s) => identifier = s.clone(),
-            _ => return Err("Error, expected an identifier"),
-        }
-
-        self.advance_tokens();
-
-        if self.match_operator('(') == false {
-            return Err("Error, expected (");
-        }
-        self.advance_tokens();
-
-        let mut parameters: Vec<String> = Vec::new();
-
-        while self.match_operator(')') == false {
-            match &self.token_vector[self.next_token] {
-                tokens::TokenTypes::Identifier(s) => parameters.push(s.clone()),
-                _ => return Err("Error, expected an identifier"),
-            }
-            self.advance_tokens();
-
-            if self.match_operator(')') == false {
-                match &self.token_vector[self.next_token] {
-                    tokens::TokenTypes::Comma => self.advance_tokens(),
-                    _ => return Err("Error, expected an identifier"),
-                }
-            }
-        }
-
-        self.advance_tokens();
-
-        if self.match_delim('{') == false {
-            return Err("Error, expected {");
-        }
-
-        self.advance_tokens();
-        self.advance_tokens();
-
-        let statement_result = self.parse_statement();
-        let statement;
-
-        match statement_result {
-            Ok(v) => statement = Box::new(v),
-            _ => return Err("error parsing statement"),
-        }
-
-        if self.match_delim('}') == false {
-            return Err("Error, expected }");
-        }
-
-        self.advance_tokens();
-        Ok(Expression::FunctionExpr {
-            identifier: identifier,
-            parameters: parameters,
-            body: statement,
-        })
-    }
-
-    fn parse_statement<'a>(&mut self) -> Result<Statement, &'a str> {
-        let mut statement: Statement;
+    fn parse_statement<'a>(&mut self) -> Result<Vec<Statement>, &'a str> {
+        let mut statement: Vec<Statement> = Vec::new();
 
         loop {
             let check_statement = self.check_statement();
             match check_statement {
-                Ok(s) => statement = s,
+                Ok(s) => statement.push(s),
                 Err(e) => return Err(e),
             }
             if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}')
@@ -666,12 +672,6 @@ impl Parser {
         }
     }
 
-    fn parse_boolean(&mut self) -> Expression {
-        let boolean = self.token_vector[self.current_token]
-            == tokens::TokenTypes::Keywords(tokens::Keywords::True);
-        Expression::BoolExp { value: boolean }
-    }
-
     fn parse_grouped_expression<'a>(&mut self) -> Result<Expression, &'a str> {
         self.advance_tokens();
         let mut precedence = 0;
@@ -718,13 +718,6 @@ impl Parser {
     fn match_current_operator(&mut self, token: char) -> bool {
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) if s == token => true,
-            _ => false,
-        }
-    }
-
-    fn match_delim(&mut self, token: char) -> bool {
-        match self.token_vector[self.next_token] {
-            tokens::TokenTypes::Delim(s) if s == token => true,
             _ => false,
         }
     }

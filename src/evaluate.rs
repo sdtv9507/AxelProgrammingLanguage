@@ -119,7 +119,7 @@ impl Evaluator {
 
                 let mut func_names: Vec<String> = Vec::new();
                 //let mut inner_environment;
-                let evaluated;
+                let mut evaluated: Option<Result<Objects, &'a str>> = None;
                 match identifier {
                     Objects::Function(func) => {
                         for i in func.parameters {
@@ -131,14 +131,21 @@ impl Evaluator {
                                 .add(func_names[i].clone(), param_values[i].clone());
                         }
 
-                        evaluated = self.eval_statement(*func.body);
+                        for statements in *func.body {
+                            evaluated = Some(self.eval_statement(statements));
+                        }
                     }
                     _ => return Err("object isn't a function"),
                 }
 
                 match evaluated {
-                    Ok(s) => return Ok(s),
-                    Err(e) => return Err(e),
+                    Some(s) => {
+                        match s {
+                            Ok(t) => return Ok(t),
+                            Err(e) => return Err(e),
+                        }
+                    },
+                    None => return Err("evaluating function"),
                 }
             }
         }
@@ -280,7 +287,6 @@ impl Evaluator {
                         Some(t) => return Ok(t),
                         None => return Err("error evaluating if expressions"),
                     }
-                    //return Ok(self.return_if_condition(*s));
                 }
                 _ => return Ok(Objects::Boolean(false)),
             },

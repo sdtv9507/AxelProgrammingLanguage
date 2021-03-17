@@ -12,12 +12,12 @@ pub enum Objects {
 #[derive(Debug, Clone)]
 pub struct Function {
     pub parameters: Vec<String>,
-    pub body: Box<parser::Statement>,
+    pub body: Box<Vec<parser::Statement>>,
     pub environment: Environment,
 }
 
 impl Function {
-    pub fn new(parameters: Vec<String>, body: Box<parser::Statement>) -> Self {
+    pub fn new(parameters: Vec<String>, body: Box<Vec<parser::Statement>>) -> Self {
         let environment = Environment::new();
         Function {
             parameters,
