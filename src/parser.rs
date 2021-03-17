@@ -400,7 +400,11 @@ impl Parser {
             }
             tokens::TokenTypes::Identifier(s) => {
                 let name = s.clone();
-                return Ok(Expression::IdentifierLit { name });
+                if &self.token_vector[self.next_token] == &tokens::TokenTypes::Operator('(') {
+                    return self.parse_call();
+                }else {
+                    return Ok(Expression::IdentifierLit { name });
+                }
             }
             tokens::TokenTypes::Operator('(') => {
                 self.advance_tokens();

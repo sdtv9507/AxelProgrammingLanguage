@@ -8,6 +8,28 @@ pub enum Objects {
     String(String),
     Boolean(bool),
     Function(Function),
+    BuiltIn(BuiltinFunction),
+}
+
+#[derive(Debug, Clone)]
+pub struct BuiltinFunction {
+    pub name: String,
+}
+
+impl BuiltinFunction {
+    pub fn new(name: String) -> Self {
+        BuiltinFunction { name }
+    }
+    pub fn call<'a>(&mut self, args: Vec<Objects>) -> Result<Objects, &'a str> {
+        match &self.name {
+            len => {
+                if args.len() != 1 {
+                    return Err("wrong number of arguments for len function");
+                }
+                return Ok(Objects::Integer(args.len() as i32));
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +84,7 @@ impl fmt::Display for Objects {
             Objects::String(s) => write!(f, "String: {}", s),
             Objects::Boolean(b) => write!(f, "Boolean: {}", b),
             Objects::Function(_s) => write!(f, "Function"),
+            Objects::BuiltIn(_s) => write!(f, "Builtin Function"),
         }
     }
 }

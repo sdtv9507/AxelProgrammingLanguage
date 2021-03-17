@@ -112,18 +112,21 @@ impl Evaluator {
                 identifier,
                 parameters,
             } => {
-                let val = self.environment.search(identifier);
-                let identifier;
+                let val = self.environment.search(identifier.clone());
+                let call_identifier;
                 match val {
-                    Some(s) => identifier = s.clone(),
-                    None => return Err("function identifier not found"),
+                    Some(s) => call_identifier = s.clone(),
+                    None => {
+                        let builtin = object::BuiltinFunction::new(identifier);
+                        call_identifier = Objects::BuiltIn(builtin);
+                    }
                 };
                 let param_values = self.eval_call_params(parameters)?;
 
                 let mut func_names: Vec<String> = Vec::new();
                 //let mut inner_environment;
                 let mut evaluated: Option<Result<Objects, &'a str>> = None;
-                match identifier {
+                match call_identifier {
                     Objects::Function(func) => {
                         for i in func.parameters {
                             func_names.push(i);
@@ -138,15 +141,16 @@ impl Evaluator {
                             evaluated = Some(self.eval_statement(statements));
                         }
                     }
+                    Objects::BuiltIn(mut func) => {
+                        evaluated = Some(func.call(param_values));
+                    }
                     _ => return Err("object isn't a function"),
                 }
 
                 match evaluated {
-                    Some(s) => {
-                        match s {
-                            Ok(t) => return Ok(t),
-                            Err(e) => return Err(e),
-                        }
+                    Some(s) => match s {
+                        Ok(t) => return Ok(t),
+                        Err(e) => return Err(e),
                     },
                     None => return Err("evaluating function"),
                 }
@@ -243,7 +247,7 @@ impl Evaluator {
             (Objects::String(s), Objects::String(t)) => match operator {
                 tokens::TokenTypes::Operator('+') => return Ok(Objects::String(s + &t)),
                 _ => return Err("unknown operator"),
-            }
+            },
             _ => return Err("operand type mismatch"),
         }
     }
