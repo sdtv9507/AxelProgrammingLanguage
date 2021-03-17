@@ -177,7 +177,7 @@ impl Parser {
             //    println!("This is a comment: Line ignored");
             //}
             _ => {
-                let expression = self.expression_parser();
+                let expression = self.expression_parser(&tokens::TokenTypes::Semicolon);
                 match expression {
                     Ok(s) => return Ok(s),
                     Err(e) => return Err(e),
@@ -200,10 +200,10 @@ impl Parser {
                 return Err("expected an identifier");
             }
         }
-        if self.match_operator('=') == false {
+        self.advance_tokens();
+        if self.match_current_operator('=') == false {
             return Err("expected a = sign, variable must be initialized");
         }
-        self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {
             return Err("expected an expression");
         }
@@ -330,13 +330,13 @@ impl Parser {
     }
 
     fn parse_if<'a>(&mut self) -> Result<Expression, &'a str> {
-        if self.match_operator('(') == false {
+        self.advance_tokens();
+        if self.match_current_operator('(') == false {
             return Err("Error, expected (");
         }
         self.advance_tokens();
-        self.advance_tokens();
 
-        let condition_result = self.expression_parser();
+        let condition_result = self.expression_parser(&tokens::TokenTypes::Operator(')'));
         let condition;
         match condition_result {
             Ok(v) => condition = Box::new(v),
@@ -355,21 +355,7 @@ impl Parser {
 
         self.advance_tokens();
 
-        let mut consequence_result: Vec<Statement> = Vec::new();
-
-        loop {
-            let check_statement = self.check_statement();
-            match check_statement {
-                Ok(s) => consequence_result.push(s),
-                Err(e) => return Err(e),
-            }
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
-                break;
-            }
-            self.advance_tokens();
-        }
-
-        let consequence = Box::new(consequence_result);
+        let consequence = Box::new(self.parse_statement(&tokens::TokenTypes::Delim('}'))?);
 
         self.advance_tokens();
         if self.match_current_delim('}') == false {
@@ -382,20 +368,7 @@ impl Parser {
                 self.advance_tokens();
                 self.advance_tokens();
                 self.advance_tokens();
-                /*let mut then_result = Vec::new();
-
-                loop {
-                    let check_statement = self.check_statement();
-                    match check_statement {
-                        Ok(s) => then_result.push(s),
-                        Err(e) => return Err(e),
-                    }
-                    if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}') {
-                        break;
-                    }
-                    self.advance_tokens();
-                }*/
-                let then_box = Box::new(self.parse_statement()?);
+                let then_box = Box::new(self.parse_statement(&tokens::TokenTypes::Delim('}'))?);
                 self.advance_tokens();
                 if self.match_current_delim('}') == false {
                     return Err("Error, expected }");
@@ -423,11 +396,12 @@ impl Parser {
                 return Ok(Expression::IdentifierLit { name });
             }
             tokens::TokenTypes::Operator('(') => {
-                return self.parse_grouped_expression();
+                self.advance_tokens();
+                return self.expression_parser(&tokens::TokenTypes::Operator(')'));
             }
             tokens::TokenTypes::Operator('-') => {
                 self.advance_tokens();
-                let parse_exp = self.expression_parser();
+                let parse_exp = self.parse_prefix_expressions();
                 let expression;
                 match parse_exp {
                     Ok(s) => expression = s,
@@ -440,7 +414,7 @@ impl Parser {
             }
             tokens::TokenTypes::Bang => {
                 self.advance_tokens();
-                let parse_exp = self.expression_parser();
+                let parse_exp = self.parse_prefix_expressions();
                 let expression;
                 match parse_exp {
                     Ok(s) => expression = s,
@@ -501,7 +475,7 @@ impl Parser {
 
         self.advance_tokens();
 
-        let statement_result = self.parse_statement();
+        let statement_result = self.parse_statement(&tokens::TokenTypes::Delim('}'));
         let statement;
 
         match statement_result {
@@ -534,11 +508,11 @@ impl Parser {
             _ => return Err("expected an identifier"),
         }
 
-        if self.match_operator('(') == false {
+        self.advance_tokens();
+        if self.match_current_operator('(') == false {
             return Err("expected (");
         }
 
-        self.advance_tokens();
         let mut parameters: Vec<Expression> = Vec::new();
         while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
             self.advance_tokens();
@@ -567,7 +541,10 @@ impl Parser {
         })
     }
 
-    fn parse_statement<'a>(&mut self) -> Result<Vec<Statement>, &'a str> {
+    fn parse_statement<'a>(
+        &mut self,
+        delimiter: &tokens::TokenTypes,
+    ) -> Result<Vec<Statement>, &'a str> {
         let mut statement: Vec<Statement> = Vec::new();
 
         loop {
@@ -576,9 +553,7 @@ impl Parser {
                 Ok(s) => statement.push(s),
                 Err(e) => return Err(e),
             }
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('}')
-                || &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
-            {
+            if &self.token_vector[self.next_token] == delimiter {
                 break;
             }
             self.advance_tokens();
@@ -587,7 +562,10 @@ impl Parser {
         Ok(statement)
     }
 
-    fn expression_parser<'a>(&mut self) -> Result<Expression, &'a str> {
+    fn expression_parser<'a>(
+        &mut self,
+        delimiter: &tokens::TokenTypes,
+    ) -> Result<Expression, &'a str> {
         let mut precedence = 0;
         let mut left_op;
         let op = self.parse_prefix_expressions();
@@ -595,18 +573,14 @@ impl Parser {
             Ok(s) => left_op = s,
             Err(e) => return Err(e),
         }
-        self.advance_tokens();
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Semicolon
-            || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
-        {
+        loop {
+            self.advance_tokens();
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
                 Err(e) => return Err(e),
             };
-            if &self.token_vector[self.next_token] == &tokens::TokenTypes::Semicolon
-                || &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')')
-            {
+            if &self.token_vector[self.current_token] == delimiter {
                 break;
             }
             precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
@@ -672,31 +646,6 @@ impl Parser {
         }
     }
 
-    fn parse_grouped_expression<'a>(&mut self) -> Result<Expression, &'a str> {
-        self.advance_tokens();
-        let mut precedence = 0;
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        while &self.token_vector[self.next_token] != &tokens::TokenTypes::Operator(')') {
-            let result_op = self.infix_expression_parser(precedence, left_op);
-            match result_op {
-                Ok(v) => left_op = v,
-                Err(e) => return Err(e),
-            };
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Operator(')') {
-                break;
-            }
-            precedence = Parser::get_precedence(&self.token_vector[self.current_token]);
-        }
-
-        Ok(left_op)
-    }
-
     fn get_precedence(token: &tokens::TokenTypes) -> usize {
         match token {
             tokens::TokenTypes::Operator('+') => 2,
@@ -705,13 +654,6 @@ impl Parser {
             tokens::TokenTypes::Operator('/') => 3,
             tokens::TokenTypes::Compare(_s) => 1,
             _ => 0,
-        }
-    }
-
-    fn match_operator(&mut self, token: char) -> bool {
-        match self.token_vector[self.next_token] {
-            tokens::TokenTypes::Operator(s) if s == token => true,
-            _ => false,
         }
     }
 
