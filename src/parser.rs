@@ -39,6 +39,15 @@ pub enum Expression {
         string: String,
     },
 
+    ArrayLit {
+        elements: Vec<Expression>,
+    },
+
+    IndexExpression {
+        left: String,
+        right: Box<Expression>,
+    },
+
     IdentifierLit {
         name: String,
     },
@@ -209,7 +218,7 @@ impl Parser {
             return Err("expected a = sign, variable must be initialized");
         }
         if &self.token_vector.len() <= &self.next_token {
-            return Err("expected an expression");
+            return Err("expected an expression (parser.rs, line 221)");
         }
 
         let mut result_op: Expression;
@@ -260,7 +269,7 @@ impl Parser {
         }
         self.advance_tokens();
         if &self.token_vector.len() <= &self.next_token {
-            return Err("error, expected an expression");
+            return Err("expected an expression (parser.rs, line 272)");
         }
 
         let mut result_op: Expression;
@@ -299,7 +308,7 @@ impl Parser {
 
     fn parse_return<'a>(&mut self) -> Result<Statement, &'a str> {
         if &self.token_vector.len() <= &self.next_token {
-            return Err("expected an expression");
+            return Err("expected an expression (parser.rs, line 311)");
         }
         let mut result_op: Expression;
         self.advance_tokens();
@@ -402,13 +411,30 @@ impl Parser {
                 let name = s.clone();
                 if &self.token_vector[self.next_token] == &tokens::TokenTypes::Operator('(') {
                     return self.parse_call();
-                }else {
+                } else if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('[') {
+                    self.advance_tokens();
+                    self.advance_tokens();
+                    let right = self.expression_parser(&tokens::TokenTypes::Delim(']'));
+                    match right {
+                        Ok(t) => {
+                            return Ok(Expression::IndexExpression {
+                                left: name,
+                                right: Box::new(t),
+                            })
+                        }
+                        Err(e) => return Err(e),
+                    }
+                } else {
                     return Ok(Expression::IdentifierLit { name });
                 }
             }
             tokens::TokenTypes::Operator('(') => {
                 self.advance_tokens();
                 return self.expression_parser(&tokens::TokenTypes::Operator(')'));
+            }
+            tokens::TokenTypes::Delim('[') => {
+                let elements: Vec<Expression> = self.parse_comma_separation(&tokens::TokenTypes::Delim(']'))?;
+                return Ok(Expression::ArrayLit { elements });
             }
             tokens::TokenTypes::Operator('-') => {
                 self.advance_tokens();
@@ -442,7 +468,7 @@ impl Parser {
             tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
                 return Ok(Expression::BoolExp { value: false })
             }
-            _ => return Err("expected an expression"),
+            _ => return Err("expected an expression (parser.rs, line 480)"),
         }
     }
 
@@ -524,8 +550,17 @@ impl Parser {
             return Err("expected (");
         }
 
+        let parameters = self.parse_comma_separation(&tokens::TokenTypes::Operator(')'))?;
+
+        Ok(Expression::CallExpr {
+            identifier,
+            parameters,
+        })
+    }
+
+    fn parse_comma_separation<'a>(&mut self, delimiter: &tokens::TokenTypes) -> Result<Vec<Expression>, &'a str> {
         let mut parameters: Vec<Expression> = Vec::new();
-        while &self.token_vector[self.current_token] != &tokens::TokenTypes::Operator(')') {
+        while &self.token_vector[self.current_token] != delimiter {
             self.advance_tokens();
             let left_op;
             let parsed_prefix = self.parse_prefix_expressions();
@@ -545,11 +580,7 @@ impl Parser {
                 parameters.push(left_op);
             }
         }
-
-        Ok(Expression::CallExpr {
-            identifier,
-            parameters,
-        })
+        return Ok(parameters);
     }
 
     fn parse_statement<'a>(

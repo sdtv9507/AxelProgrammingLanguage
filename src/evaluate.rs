@@ -140,6 +140,10 @@ impl Evaluator {
                         for statements in *func.body {
                             evaluated = Some(self.eval_statement(statements));
                         }
+
+                        for i in 0..func_names.len() {
+                            self.environment.remove(func_names[i].clone());
+                        }
                     }
                     Objects::BuiltIn(mut func) => {
                         evaluated = Some(func.call(param_values));
@@ -155,6 +159,7 @@ impl Evaluator {
                     None => return Err("evaluating function"),
                 }
             }
+            _ => return Err("e"),
         }
     }
 

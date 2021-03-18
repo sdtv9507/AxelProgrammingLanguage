@@ -22,11 +22,14 @@ impl BuiltinFunction {
     }
     pub fn call<'a>(&mut self, args: Vec<Objects>) -> Result<Objects, &'a str> {
         match &self.name {
-            len => {
+            _len => {
                 if args.len() != 1 {
                     return Err("wrong number of arguments for len function");
                 }
-                return Ok(Objects::Integer(args.len() as i32));
+                match &args[0] {
+                    Objects::String(s) => return Ok(Objects::Integer(s.len() as i32)),
+                    _ => return Err("unsupported argument for len"),
+                }
             }
         }
     }
@@ -66,10 +69,6 @@ impl Environment {
 
     pub fn remove(&mut self, name: String) {
         self.value.remove_entry(&name);
-    }
-
-    pub fn update(&mut self, name: String, value: Objects) {
-        self.value.entry(name).or_insert(value);
     }
 
     pub fn search(&mut self, name: String) -> Option<&Objects> {
