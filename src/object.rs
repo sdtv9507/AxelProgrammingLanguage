@@ -9,6 +9,7 @@ pub enum Objects {
     Boolean(bool),
     Function(Function),
     BuiltIn(BuiltinFunction),
+    Array(Vec<Objects>),
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +85,12 @@ impl fmt::Display for Objects {
             Objects::Boolean(b) => write!(f, "Boolean: {}", b),
             Objects::Function(_s) => write!(f, "Function"),
             Objects::BuiltIn(_s) => write!(f, "Builtin Function"),
+            Objects::Array(s) => {
+                for i in s {
+                    write!(f, "Array object {0} ", i)?;
+                }
+                return Ok(());
+            }
         }
     }
 }

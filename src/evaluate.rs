@@ -159,7 +159,27 @@ impl Evaluator {
                     None => return Err("evaluating function"),
                 }
             }
-            _ => return Err("e"),
+            parser::Expression::ArrayLit { elements } => {
+                let mut elements_object: Vec<Objects> = Vec::new();
+                for element in elements {
+                    elements_object.push(self.eval_expression(element)?);
+                }
+                return Ok(Objects::Array(elements_object));
+            }
+            parser::Expression::IndexExpression { left, right } => {
+                let left_obj = self.eval_expression(*left)?;
+                let right_obj = self.eval_expression(*right)?;
+                return self.eval_index_expression(left_obj, right_obj);
+            }
+        }
+    }
+
+    fn eval_index_expression<'a>(&mut self, left: Objects, right: Objects) -> Result<Objects, &'a str> {
+        match (left, right) {
+            (Objects::Array(s), Objects::Integer(t)) => {
+                return Ok(s[t as usize].clone());
+            }
+            _ => return Err("Array call expressions unsupported"),
         }
     }
 

@@ -44,7 +44,7 @@ pub enum Expression {
     },
 
     IndexExpression {
-        left: String,
+        left: Box<Expression>,
         right: Box<Expression>,
     },
 
@@ -418,7 +418,7 @@ impl Parser {
                     match right {
                         Ok(t) => {
                             return Ok(Expression::IndexExpression {
-                                left: name,
+                                left: Box::new(Expression::IdentifierLit { name }),
                                 right: Box::new(t),
                             })
                         }
