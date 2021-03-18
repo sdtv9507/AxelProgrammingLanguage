@@ -22,16 +22,67 @@ impl BuiltinFunction {
         BuiltinFunction { name }
     }
     pub fn call<'a>(&mut self, args: Vec<Objects>) -> Result<Objects, &'a str> {
-        match &self.name {
-            _len => {
+        match &self.name[..] {
+            "len" => {
                 if args.len() != 1 {
                     return Err("wrong number of arguments for len function");
                 }
                 match &args[0] {
                     Objects::String(s) => return Ok(Objects::Integer(s.len() as i32)),
+                    Objects::Array(s) => return Ok(Objects::Integer(s.len() as i32)),
                     _ => return Err("unsupported argument for len"),
                 }
             }
+            "first" => {
+                if args.len() != 1 {
+                    return Err("wrong number of arguments for first function");
+                }
+                match &args[0] {
+                    Objects::String(s) => {
+                        let chr: Vec<char> = s.chars().collect();
+                        return Ok(Objects::String(String::from(chr[0])));
+                    },
+                    Objects::Array(s) => return Ok(s[0].clone()),
+                    _ => return Err("unsupported argument for first"),
+                }
+            }
+            "last" => {
+                if args.len() != 1 {
+                    return Err("wrong number of arguments for last function");
+                }
+                match &args[0] {
+                    Objects::String(s) => {
+                        let chr: Vec<char> = s.chars().collect();
+                        let len = chr.len() - 1;
+                        return Ok(Objects::String(String::from(chr[len])));
+                    },
+                    Objects::Array(s) => {
+                        let len = s.len() - 1;
+                        return Ok(s[len].clone())
+                    },
+                    _ => return Err("unsupported argument for last"),
+                }
+            }
+            "push" => {
+                if args.len() != 2 {
+                    return Err("wrong number of arguments for push function");
+                }
+                match &args[0] {
+                    Objects::Array(s) => {
+                        let mut f: Vec<Objects> = s.clone();
+                        match &args[1] {
+                            Objects::Integer(t) => f.push(Objects::Integer(*t)),
+                            Objects::String(t) => f.push(Objects::String(t.clone())),
+                            Objects::Boolean(t) => f.push(Objects::Boolean(t.clone())),
+                            Objects::Array(t) => f.push(Objects::Array(t.clone())),
+                            _ => return Err("push function only supports objects in the second argument"),
+                        }
+                        return Ok(Objects::Array(f));
+                    }
+                    _ => return Err("push function only supports arrays for the first argument"),
+                }
+            }
+            _ => return Err("builtin function not found"),
         }
     }
 }
