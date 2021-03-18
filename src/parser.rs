@@ -221,34 +221,7 @@ impl Parser {
             return Err("expected an expression (parser.rs, line 221)");
         }
 
-        let mut result_op: Expression;
-        self.advance_tokens();
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-            return Ok(Statement::VarStatement {
-                name: identifier,
-                value: Box::from(left_op),
-            });
-        }
-        loop {
-            if self.token_vector.len() <= self.next_token {
-                return Err("token overflow on variable parse");
-            }
-            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("reached end of line without semicolon on variable parse");
-            }
-            result_op = self.infix_expression_parser(0, left_op)?;
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-                break;
-            }
-            left_op = result_op;
-        }
+        let result_op: Expression = self.parse_loop_expressions()?;
         Ok(Statement::VarStatement {
             name: identifier,
             value: Box::from(result_op),
@@ -272,34 +245,7 @@ impl Parser {
             return Err("expected an expression (parser.rs, line 272)");
         }
 
-        let mut result_op: Expression;
-        self.advance_tokens();
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-            return Ok(Statement::ConstStatement {
-                name: identifier,
-                value: Box::from(left_op),
-            });
-        }
-        loop {
-            if self.token_vector.len() <= self.next_token {
-                return Err("token overflow on variable parse");
-            }
-            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("reached end of line without semicolon on variable parse");
-            }
-            result_op = self.infix_expression_parser(0, left_op)?;
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-                break;
-            }
-            left_op = result_op;
-        }
+        let result_op: Expression = self.parse_loop_expressions()?;
         Ok(Statement::ConstStatement {
             name: identifier,
             value: Box::from(result_op),
@@ -310,33 +256,7 @@ impl Parser {
         if &self.token_vector.len() <= &self.next_token {
             return Err("expected an expression (parser.rs, line 311)");
         }
-        let mut result_op: Expression;
-        self.advance_tokens();
-        let mut left_op;
-        let op = self.parse_prefix_expressions();
-        match op {
-            Ok(s) => left_op = s,
-            Err(e) => return Err(e),
-        }
-        self.advance_tokens();
-        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-            return Ok(Statement::ReturnStatement {
-                value: Box::from(left_op),
-            });
-        }
-        loop {
-            if self.token_vector.len() <= self.next_token {
-                return Err("token overflow on return parse");
-            }
-            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
-                return Err("reached end of line without semicolon on return parse");
-            }
-            result_op = self.infix_expression_parser(0, left_op)?;
-            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
-                break;
-            }
-            left_op = result_op;
-        }
+        let result_op: Expression = self.parse_loop_expressions()?;
         Ok(Statement::ReturnStatement {
             value: Box::from(result_op),
         })
@@ -711,5 +631,34 @@ impl Parser {
             tokens::TokenTypes::Delim(s) if s == token => true,
             _ => false,
         }
+    }
+
+    fn parse_loop_expressions<'a>(&mut self) -> Result<Expression, &'a str> {
+        let mut result_op: Expression;
+        self.advance_tokens();
+        let mut left_op;
+        let op = self.parse_prefix_expressions();
+        match op {
+            Ok(s) => left_op = s,
+            Err(e) => return Err(e),
+        }
+        self.advance_tokens();
+        if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
+            return Ok(left_op);
+        }
+        loop {
+            if self.token_vector.len() <= self.next_token {
+                return Err("token overflow on return parse");
+            }
+            if &tokens::TokenTypes::EndOfLine == &self.token_vector[self.next_token] {
+                return Err("reached end of line without semicolon on return parse");
+            }
+            result_op = self.infix_expression_parser(0, left_op)?;
+            if &self.token_vector[self.current_token] == &tokens::TokenTypes::Semicolon {
+                break;
+            }
+            left_op = result_op;
+        }
+        return Ok(result_op);
     }
 }
