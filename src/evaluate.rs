@@ -215,7 +215,8 @@ impl Evaluator {
     fn eval_minus_operator<'a>(&mut self, obj: Objects) -> Result<Objects, &'a str> {
         match obj {
             Objects::Integer(s) => return Ok(Objects::Integer(-s)),
-            _ => return Err("expected an integer to the right of - sign"),
+            Objects::Float(s) => return Ok(Objects::Float(-s)),
+            _ => return Err("expected an integer or float to the right of - sign"),
         }
     }
 
@@ -255,6 +256,31 @@ impl Evaluator {
                 tokens::TokenTypes::Operator('-') => return Ok(Objects::Integer(s - r)),
                 tokens::TokenTypes::Operator('*') => return Ok(Objects::Integer(s * r)),
                 tokens::TokenTypes::Operator('/') => return Ok(Objects::Integer(s / r)),
+                tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
+                    return Ok(Objects::Boolean(s == r));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => {
+                    return Ok(Objects::Boolean(s != r));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::Less) => {
+                    return Ok(Objects::Boolean(s < r));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::LessE) => {
+                    return Ok(Objects::Boolean(s <= r));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::Greater) => {
+                    return Ok(Objects::Boolean(s > r));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => {
+                    return Ok(Objects::Boolean(s >= r));
+                }
+                _ => return Err("unknown operator"),
+            },
+            (Objects::Float(s), Objects::Float(r)) => match operator {
+                tokens::TokenTypes::Operator('+') => return Ok(Objects::Float(s + r)),
+                tokens::TokenTypes::Operator('-') => return Ok(Objects::Float(s - r)),
+                tokens::TokenTypes::Operator('*') => return Ok(Objects::Float(s * r)),
+                tokens::TokenTypes::Operator('/') => return Ok(Objects::Float(s / r)),
                 tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
                     return Ok(Objects::Boolean(s == r));
                 }
