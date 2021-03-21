@@ -37,6 +37,10 @@ pub enum Expression {
         number: i32,
     },
 
+    FloatLit {
+        number: f32,
+    },
+
     StringLit {
         string: String,
     },
@@ -329,6 +333,9 @@ impl Parser {
         match &self.token_vector[self.current_token] {
             tokens::TokenTypes::NumbersInt(s) => {
                 return Ok(Expression::NumberLit { number: s.clone() })
+            }
+            tokens::TokenTypes::NumbersFloat(s) => {
+                return Ok(Expression::FloatLit { number: s.clone() })
             }
             tokens::TokenTypes::Strings(s) => {
                 return Ok(Expression::StringLit { string: s.clone() })

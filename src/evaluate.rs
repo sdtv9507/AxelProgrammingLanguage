@@ -50,6 +50,9 @@ impl Evaluator {
             parser::Expression::NumberLit { number } => {
                 return Ok(object::Objects::Integer(number));
             }
+            parser::Expression::FloatLit { number } => {
+                return Ok(object::Objects::Float(number));
+            }
             parser::Expression::StringLit { string } => {
                 return Ok(object::Objects::String(string));
             }

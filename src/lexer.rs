@@ -134,9 +134,23 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                         final_index += 1;
                         chr = text_vec[final_index];
                     }
-                    let identifier: &str = &text_vec[index..final_index].iter().collect::<String>();
-                    let int_identifier = identifier.parse().unwrap();
-                    token_vector.push(tokens::TokenTypes::NumbersInt(int_identifier));
+                    if chr == '.' {
+                        final_index += 1;
+                        chr = text_vec[final_index];
+                        while is_valid_number(chr) == true {
+                            final_index += 1;
+                            chr = text_vec[final_index];
+                        }
+                        let identifier: &str =
+                            &text_vec[index..final_index].iter().collect::<String>();
+                        let float_identifier: f32 = identifier.parse::<f32>().unwrap();
+                        token_vector.push(tokens::TokenTypes::NumbersFloat(float_identifier));
+                    } else {
+                        let identifier: &str =
+                            &text_vec[index..final_index].iter().collect::<String>();
+                        let int_identifier = identifier.parse().unwrap();
+                        token_vector.push(tokens::TokenTypes::NumbersInt(int_identifier));
+                    }
                     index = final_index - 1;
                 } else if is_valid_identifier(chr) == true {
                     let mut final_index = index;
