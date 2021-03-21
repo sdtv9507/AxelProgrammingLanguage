@@ -96,6 +96,9 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
             ',' => {
                 token_vector.push(tokens::TokenTypes::Comma);
             }
+            ':' => {
+                token_vector.push(tokens::TokenTypes::Colon);
+            }
             ';' => {
                 token_vector.push(tokens::TokenTypes::Semicolon);
             }
