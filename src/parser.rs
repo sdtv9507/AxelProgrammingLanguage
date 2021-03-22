@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use tokens::TokenTypes;
 
 use crate::tokens;
@@ -55,7 +53,8 @@ pub enum Expression {
     },
 
     HashMap {
-        elements: HashMap<Expression, Expression>,
+        keys: Vec<Expression>,
+        values: Vec<Expression>,
     },
 
     IdentifierLit {
@@ -370,26 +369,27 @@ impl Parser {
                     self.parse_comma_separation(&tokens::TokenTypes::Delim(']'))?;
                 return Ok(Expression::ArrayLit { elements });
             }
-            /*tokens::TokenTypes::Delim('{') => {
-                let elements: HashMap<Expression, Expression> = HashMap::new();
+            tokens::TokenTypes::Delim('{') => {
+                let mut keys: Vec<Expression> = Vec::new();
+                let mut values: Vec<Expression> = Vec::new();
                 while self.match_current_delim('}') == false {
                     self.advance_tokens();
-                    let key = self.parse_prefix_expressions()?;
+                    keys.push(self.parse_prefix_expressions()?);
                     self.advance_tokens();
-                    match self.token_vector[self.next_token] {
+                    match self.token_vector[self.current_token] {
                         tokens::TokenTypes::Colon => self.advance_tokens(),
                         _ => return Err("expected a : (colon)"),
                     }
-                    let value = self.parse_prefix_expressions()?;
-                    elements.insert(key, value);
+                    values.push(self.parse_prefix_expressions()?);
                     match self.token_vector[self.next_token] {
                         tokens::TokenTypes::Comma => self.advance_tokens(),
-                        tokens::TokenTypes::Delim('{') => self.advance_tokens(),
+                        tokens::TokenTypes::Delim('}') => break,
                         _ => return Err("expected a , (comma) or } (right brace"),
                     }
                 }
-                return Ok(Expression::HashMap { elements });
-            }*/
+                self.advance_tokens();
+                return Ok(Expression::HashMap { keys, values });
+            }
             tokens::TokenTypes::Operator('-') => {
                 self.advance_tokens();
                 let parse_exp = self.parse_prefix_expressions();

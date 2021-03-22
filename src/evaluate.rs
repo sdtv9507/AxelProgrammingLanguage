@@ -174,7 +174,7 @@ impl Evaluator {
                 let right_obj = self.eval_expression(*right)?;
                 return self.eval_index_expression(left_obj, right_obj);
             }
-            parser::Expression::HashMap { elements: _ } => {
+            parser::Expression::HashMap { keys: _, values: _ } => {
                 return Err("Hash map function not finished");
             }
         }
