@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use object::{Environment, Function, Objects};
 
 use crate::parser;
@@ -174,8 +176,12 @@ impl Evaluator {
                 let right_obj = self.eval_expression(*right)?;
                 return self.eval_index_expression(left_obj, right_obj);
             }
-            parser::Expression::HashMap { keys: _, values: _ } => {
-                return Err("Hash map function not finished");
+            parser::Expression::HashMap { keys, values } => {
+                let hash = HashMap::new();
+                for (i, j) in keys.iter().zip(values) {
+                    //hash.insert(self.eval_expression(i.clone())?, self.eval_expression(j)?);
+                }
+                return Ok(Objects::Hash(hash));
             }
         }
     }

@@ -8,7 +8,7 @@ pub struct Parser {
     next_token: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     VarStatement {
         name: String,
@@ -29,7 +29,7 @@ pub enum Statement {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     NumberLit {
         number: i32,
@@ -93,6 +93,8 @@ pub enum Expression {
         right: Box<Expression>,
     },
 }
+
+impl Eq for Expression {}
 
 impl Parser {
     pub fn new(line: Vec<tokens::TokenTypes>) -> Self {

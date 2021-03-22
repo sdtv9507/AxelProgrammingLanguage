@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::parser;
+
 #[derive(Debug, Clone)]
 pub enum Objects {
     Integer(i32),
@@ -11,6 +12,7 @@ pub enum Objects {
     Function(Function),
     BuiltIn(BuiltinFunction),
     Array(Vec<Objects>),
+    Hash(HashMap<Objects, Objects>)
 }
 
 #[derive(Debug, Clone)]
@@ -178,6 +180,12 @@ impl fmt::Display for Objects {
                 }
                 return Ok(());
             }
+            Objects::Hash(s) => {
+                for i in s {
+                    write!(f, "Hash key: {0}, value: {1}", i.0, i.1)?;
+                }
+                return Ok(());
+            },
         }
     }
 }
