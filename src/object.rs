@@ -42,7 +42,7 @@ impl BuiltinFunction {
                     Objects::String(s) => {
                         let chr: Vec<char> = s.chars().collect();
                         return Ok(Objects::String(String::from(chr[0])));
-                    },
+                    }
                     Objects::Array(s) => return Ok(s[0].clone()),
                     _ => return Err("unsupported argument for first"),
                 }
@@ -56,11 +56,11 @@ impl BuiltinFunction {
                         let chr: Vec<char> = s.chars().collect();
                         let len = chr.len() - 1;
                         return Ok(Objects::String(String::from(chr[len])));
-                    },
+                    }
                     Objects::Array(s) => {
                         let len = s.len() - 1;
-                        return Ok(s[len].clone())
-                    },
+                        return Ok(s[len].clone());
+                    }
                     _ => return Err("unsupported argument for last"),
                 }
             }
@@ -76,11 +76,45 @@ impl BuiltinFunction {
                             Objects::String(t) => f.push(Objects::String(t.clone())),
                             Objects::Boolean(t) => f.push(Objects::Boolean(t.clone())),
                             Objects::Array(t) => f.push(Objects::Array(t.clone())),
-                            _ => return Err("push function only supports objects in the second argument"),
+                            _ => {
+                                return Err(
+                                    "push function only supports objects in the second argument",
+                                )
+                            }
                         }
                         return Ok(Objects::Array(f));
                     }
                     _ => return Err("push function only supports arrays for the first argument"),
+                }
+            }
+            "print" => {
+                if args.len() != 1 {
+                    return Err("wrong number of arguments for print function");
+                }
+                match &args[0] {
+                    Objects::String(s) => {
+                        println!("{}", s);
+                        return Ok(Objects::String(String::from("")));
+                    }
+                    Objects::Integer(s) => {
+                        println!("{}", s);
+                        return Ok(Objects::String(String::from("")));
+                    }
+                    Objects::Float(s) => {
+                        println!("{}", s);
+                        return Ok(Objects::String(String::from("")));
+                    }
+                    Objects::Boolean(s) => {
+                        println!("{}", s);
+                        return Ok(Objects::String(String::from("")));
+                    }
+                    Objects::Array(s) => {
+                        for i in s {
+                            println!("{}", i);
+                        }
+                        return Ok(Objects::String(String::from("")));
+                    }
+                    _ => return Err("unsupported argument for print"),
                 }
             }
             _ => return Err("builtin function not found"),
