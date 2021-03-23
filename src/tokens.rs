@@ -2,6 +2,7 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenTypes {
     Operator(char),
+    CompoundOperator(char),
     Identifier(String),
     Keywords(Keywords),
     NumbersInt(i32),
@@ -46,6 +47,7 @@ impl fmt::Display for TokenTypes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             TokenTypes::Operator(s) => write!(f, "Operator {}", s),
+            TokenTypes::CompoundOperator(s) => write!(f, "Compound Operator {}", s),
             TokenTypes::Identifier(s) => write!(f, "Identifier {}", s),
             TokenTypes::Keywords(s) => write!(f, "Keyword {}", s),
             TokenTypes::NumbersInt(s) => write!(f, "Number {}", s),

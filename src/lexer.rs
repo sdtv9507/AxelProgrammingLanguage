@@ -25,10 +25,22 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
         }
         match chr {
             '+' => {
-                token_vector.push(tokens::TokenTypes::Operator('+'));
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::CompoundOperator('+'));
+                } else {
+                    token_vector.push(tokens::TokenTypes::Operator('+'));
+                }
             }
             '-' => {
-                token_vector.push(tokens::TokenTypes::Operator('-'));
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::CompoundOperator('-'));
+                } else {
+                    token_vector.push(tokens::TokenTypes::Operator('-'));
+                }
             }
             '=' => {
                 let final_index = index + 1;
@@ -67,10 +79,22 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                 }
             }
             '*' => {
-                token_vector.push(tokens::TokenTypes::Operator('*'));
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::CompoundOperator('*'));
+                } else {
+                    token_vector.push(tokens::TokenTypes::Operator('*'));
+                }
             }
             '/' => {
-                token_vector.push(tokens::TokenTypes::Operator('/'));
+                let final_index = index + 1;
+                if text_vec[final_index] == '=' {
+                    index += 1;
+                    token_vector.push(tokens::TokenTypes::CompoundOperator('/'));
+                } else {
+                    token_vector.push(tokens::TokenTypes::Operator('/'));
+                }
             }
             '(' => {
                 token_vector.push(tokens::TokenTypes::Operator('('));

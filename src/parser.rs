@@ -92,6 +92,12 @@ pub enum Expression {
         operator: tokens::TokenTypes,
         right: Box<Expression>,
     },
+
+    CompoundOperation {
+        identifier: String,
+        operator: tokens::TokenTypes,
+        right: Box<Expression>,
+    },
 }
 
 impl Eq for Expression {}
@@ -343,23 +349,35 @@ impl Parser {
             }
             tokens::TokenTypes::Identifier(s) => {
                 let name = s.clone();
-                if &self.token_vector[self.next_token] == &tokens::TokenTypes::Operator('(') {
-                    return self.parse_call();
-                } else if &self.token_vector[self.next_token] == &tokens::TokenTypes::Delim('[') {
-                    self.advance_tokens();
-                    self.advance_tokens();
-                    let right = self.expression_parser(&tokens::TokenTypes::Delim(']'));
-                    match right {
-                        Ok(t) => {
-                            return Ok(Expression::IndexExpression {
-                                left: Box::new(Expression::IdentifierLit { name }),
-                                right: Box::new(t),
-                            })
+                
+                match self.token_vector[self.next_token] {
+                    tokens::TokenTypes::Delim('[') => {
+                        self.advance_tokens();
+                        self.advance_tokens();
+                        let right = self.expression_parser(&tokens::TokenTypes::Delim(']'));
+                        match right {
+                            Ok(t) => {
+                                return Ok(Expression::IndexExpression {
+                                    left: Box::new(Expression::IdentifierLit { name }),
+                                    right: Box::new(t),
+                                })
+                            }
+                            Err(e) => return Err(e),
                         }
-                        Err(e) => return Err(e),
                     }
-                } else {
-                    return Ok(Expression::IdentifierLit { name });
+                    tokens::TokenTypes::Operator('(') => {
+                        return self.parse_call();
+                    }
+                    tokens::TokenTypes::CompoundOperator(t) => {
+                        self.advance_tokens();
+                        let right = self.expression_parser(&tokens::TokenTypes::Semicolon)?;
+                        return Ok(Expression::CompoundOperation{
+                            identifier: name,
+                            operator: tokens::TokenTypes::CompoundOperator(t),
+                            right: Box::from(right),
+                        });
+                    }
+                    _ => return Ok(Expression::IdentifierLit { name }),
                 }
             }
             tokens::TokenTypes::Operator('(') => {
