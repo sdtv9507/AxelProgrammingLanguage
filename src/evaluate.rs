@@ -183,6 +183,30 @@ impl Evaluator {
                 }
                 return Ok(Objects::Hash(hash));
             }
+            parser::Expression::CompoundOperation { identifier, operator, right} => {
+                let val = self.environment.search(identifier.clone());
+                let id_value;
+                match val {
+                    Some(s) => id_value = s.clone(),
+                    None => return Err("identifier not found"),
+                }
+                let right_obj = self.eval_expression(*right)?;
+                match operator {
+                    tokens::TokenTypes::CompoundOperator('+') => {
+                        let operator = tokens::TokenTypes::Operator('+');
+                        let eval_expression = self.eval_infix_expression(operator, id_value, right_obj);
+                        match eval_expression {
+                            Ok(s) => {
+                                self.environment.remove(identifier.clone());
+                                self.environment.add(identifier, s.clone());
+                                return Ok(s);
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    _ => return Err("wrong compound operator"),
+                }
+            }
         }
     }
 

@@ -1,6 +1,6 @@
-use tokens::TokenTypes;
-
 use crate::tokens;
+use std::fmt;
+use tokens::TokenTypes;
 
 pub struct Parser {
     token_vector: Vec<TokenTypes>,
@@ -27,6 +27,25 @@ pub enum Statement {
     ExpressionStatement {
         value: Box<Expression>,
     },
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Statement::VarStatement { name, value } => {
+                write!(f, "Var Statement name: {0}, value: {1}", name, *value)
+            }
+            Statement::ConstStatement { name, value } => {
+                write!(f, "Const Statement name: {0}, value: {1}", name, *value)
+            }
+            Statement::ReturnStatement { value } => {
+                write!(f, "Return Statement value: {0}", *value)
+            }
+            Statement::ExpressionStatement { value } => {
+                write!(f, "Expression Statement value: {0}", *value)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,6 +117,15 @@ pub enum Expression {
         operator: tokens::TokenTypes,
         right: Box<Expression>,
     },
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Expression::NumberLit { number } => write!(f, "Number Literal Number: {0}", number),
+            _ => write!(f, "Expression"),
+        }
+    }
 }
 
 impl Eq for Expression {}
@@ -193,14 +221,6 @@ impl Parser {
             tokens::TokenTypes::Keywords(tokens::Keywords::False) => {
                 let false_expression = self.parse_boolean();
                 Ok(false_expression)
-            }
-
-            tokens::TokenTypes::Identifier(_s) => {
-                let call_expression = self.parse_call();
-                match call_expression {
-                    Ok(s) => return Ok(s),
-                    Err(e) => return Err(e),
-                }
             }
 
             //tokens::TokenTypes::Comment => {
@@ -349,7 +369,7 @@ impl Parser {
             }
             tokens::TokenTypes::Identifier(s) => {
                 let name = s.clone();
-                
+
                 match self.token_vector[self.next_token] {
                     tokens::TokenTypes::Delim('[') => {
                         self.advance_tokens();
@@ -370,8 +390,9 @@ impl Parser {
                     }
                     tokens::TokenTypes::CompoundOperator(t) => {
                         self.advance_tokens();
+                        self.advance_tokens();
                         let right = self.expression_parser(&tokens::TokenTypes::Semicolon)?;
-                        return Ok(Expression::CompoundOperation{
+                        return Ok(Expression::CompoundOperation {
                             identifier: name,
                             operator: tokens::TokenTypes::CompoundOperator(t),
                             right: Box::from(right),
