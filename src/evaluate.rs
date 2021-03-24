@@ -178,7 +178,7 @@ impl Evaluator {
             }
             parser::Expression::HashMap { keys, values } => {
                 let hash = HashMap::new();
-                for (i, j) in keys.iter().zip(values) {
+                for (_i, _j) in keys.iter().zip(values) {
                     //hash.insert(self.eval_expression(i.clone())?, self.eval_expression(j)?);
                 }
                 return Ok(Objects::Hash(hash));
@@ -197,14 +197,24 @@ impl Evaluator {
                         let eval_expression = self.eval_infix_expression(operator, id_value, right_obj);
                         match eval_expression {
                             Ok(s) => {
-                                self.environment.remove(identifier.clone());
-                                self.environment.add(identifier, s.clone());
                                 return Ok(s);
                             }
                             Err(e) => return Err(e),
                         }
                     }
                     _ => return Err("wrong compound operator"),
+                }
+            }
+            parser::Expression::VarChange { identifier, right } => {
+                let val = self.environment.search(identifier.clone());
+                match val {
+                    Some(_s) => {
+                        let right_obj = self.eval_expression(*right)?;
+                        self.environment.remove(identifier.clone());
+                        self.environment.add(identifier, right_obj.clone());
+                        return Ok(right_obj);
+                    },
+                    None => return Err("identifier not found"),
                 }
             }
         }

@@ -112,6 +112,11 @@ pub enum Expression {
         right: Box<Expression>,
     },
 
+    VarChange {
+        identifier: String,
+        right: Box<Expression>,
+    },
+
     CompoundOperation {
         identifier: String,
         operator: tokens::TokenTypes,
@@ -121,9 +126,77 @@ pub enum Expression {
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Expression::NumberLit { number } => write!(f, "Number Literal Number: {0}", number),
-            _ => write!(f, "Expression"),
+        match self {
+            Expression::NumberLit { number } => write!(f, "Number Literal: {0}", number),
+            Expression::FloatLit { number } => write!(f, "Float Literal: {0}", number),
+            Expression::StringLit { string } => write!(f, "String Literal: {0}", string),
+            Expression::ArrayLit { elements } => {
+                for i in elements {
+                    write!(f, "Array Element: {0}", i)?;
+                }
+                return Ok(());
+            }
+            Expression::IndexExpression { left, right } => {
+                write!(f, "Index Expression: left: {0}, right: {1}", left, right)
+            }
+            Expression::HashMap { keys, values } => {
+                for (i, j) in keys.iter().zip(values) {
+                    write!(f, "Hash Key Element: {0}", i)?;
+                    write!(f, "Hash Value Element: {0}", j)?;
+                }
+                return Ok(());
+            }
+            Expression::IdentifierLit { name } => write!(f, "Identifier Literal: {0}", name),
+            Expression::BoolExp { value } => write!(f, "Boolean Expression: {0}", value),
+            Expression::IfExpr {
+                condition,
+                then: _,
+                other: _,
+            } => write!(f, "If Expression: condition: {0}", condition),
+
+            Expression::FunctionExpr {
+                identifier,
+                parameters: _,
+                body: _,
+            } => write!(f, "Function Expression: identifier: {0}", identifier),
+            Expression::InfixOp {
+                left,
+                operator,
+                right,
+            } => write!(
+                f,
+                "Infix Operation: left: {0}, operator: {1}, right: {2}",
+                *left, operator, *right
+            ),
+            Expression::CallExpr {
+                identifier,
+                parameters,
+            } => {
+                write!(f, "Call Expression identifier: {0}", identifier)?;
+                for i in parameters {
+                    write!(f, "Call Expression Parameters: {0}", i)?;
+                }
+                return Ok(());
+            }
+            Expression::Prefix { operator, right } => write!(
+                f,
+                "Infix Operation: operator: {0}, right: {1}",
+                operator, *right
+            ),
+            Expression::CompoundOperation {
+                identifier,
+                operator,
+                right,
+            } => write!(
+                f,
+                "Compound Operation: identifier: {0}, operator: {1}, right: {2}",
+                identifier, operator, *right
+            ),
+            Expression::VarChange { identifier, right } => write!(
+                f,
+                "Change Variable: identifier: {0}, right: {1}",
+                identifier, *right
+            ),
         }
     }
 }
@@ -223,6 +296,44 @@ impl Parser {
                 Ok(false_expression)
             }
 
+            tokens::TokenTypes::Identifier(s) => {
+                let name = s.clone();
+                match self.token_vector[self.next_token] {
+                    tokens::TokenTypes::Delim('[') => {
+                        self.advance_tokens();
+                        self.advance_tokens();
+                        let right = self.expression_parser(&tokens::TokenTypes::Delim(']'));
+                        match right {
+                            Ok(t) => {
+                                return Ok(Expression::IndexExpression {
+                                    left: Box::new(Expression::IdentifierLit { name }),
+                                    right: Box::new(t),
+                                })
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    tokens::TokenTypes::Operator('(') => {
+                        return self.parse_call();
+                    }
+                    tokens::TokenTypes::CompoundOperator(t) => {
+                        self.advance_tokens();
+                        //self.advance_tokens();
+                        let rt = self.parse_loop_expressions()?;
+                        //self.advance_tokens();
+                        let compound_op = Expression::CompoundOperation {
+                            identifier: name.clone(),
+                            operator: tokens::TokenTypes::CompoundOperator(t),
+                            right: Box::from(rt),
+                        };
+                        return Ok(Expression::VarChange {
+                            identifier: name.clone(),
+                            right: Box::from(compound_op),
+                        });
+                    }
+                    _ => return Err("wrong identifier statement"),
+                }
+            }
             //tokens::TokenTypes::Comment => {
             //    println!("This is a comment: Line ignored");
             //}
@@ -390,12 +501,17 @@ impl Parser {
                     }
                     tokens::TokenTypes::CompoundOperator(t) => {
                         self.advance_tokens();
-                        self.advance_tokens();
-                        let right = self.expression_parser(&tokens::TokenTypes::Semicolon)?;
-                        return Ok(Expression::CompoundOperation {
-                            identifier: name,
+                        //self.advance_tokens();
+                        let rt = self.parse_loop_expressions()?;
+                        //self.advance_tokens();
+                        let compound_op = Expression::CompoundOperation {
+                            identifier: name.clone(),
                             operator: tokens::TokenTypes::CompoundOperator(t),
-                            right: Box::from(right),
+                            right: Box::from(rt),
+                        };
+                        return Ok(Expression::VarChange {
+                            identifier: name.clone(),
+                            right: Box::from(compound_op),
                         });
                     }
                     _ => return Ok(Expression::IdentifierLit { name }),
@@ -615,6 +731,9 @@ impl Parser {
         }
         loop {
             self.advance_tokens();
+            println!("delimiter {}", delimiter);
+            println!("left {}", left_op);
+            println!("token {}", self.token_vector[self.current_token]);
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
@@ -637,6 +756,7 @@ impl Parser {
         let op;
         match self.token_vector[self.current_token] {
             tokens::TokenTypes::Operator(s) => op = tokens::TokenTypes::Operator(s),
+            tokens::TokenTypes::CompoundOperator(s) => op = tokens::TokenTypes::CompoundOperator(s),
             tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
                 op = tokens::TokenTypes::Compare(tokens::Comparison::Equal)
             }
