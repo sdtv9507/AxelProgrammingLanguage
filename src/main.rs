@@ -25,9 +25,26 @@ fn main() {
 
         let token = lexer::get_keywords(&contents);
         let mut parser = Parser::new(token);
-        let result = parser.check_statement();
+        let mut evaluator = Evaluator::new();
+        let result = parser.parse_token_line();
         match result {
-            Ok(_s) => println!("Program success"),
+            Ok(s) => {
+                let mut obj_vector = Vec::new();
+                for st in s {
+                    let comp = st.clone();
+                    let eval = evaluator.eval_statement(st);
+                    obj_vector.push(eval);
+                    match comp {
+                        parser::Statement::ReturnStatement { value: _ } => break,
+                        _ => continue,
+                    }
+                }
+                let len = obj_vector.len() - 1;
+                match &obj_vector[len] {
+                    Ok(s) => println!("Evaluation success: {}", s),
+                    Err(e) => println!("Evaluation error: {}", e),
+                }
+            }
             Err(e) => println!("Exit program with error: {}", e),
         }
     }
