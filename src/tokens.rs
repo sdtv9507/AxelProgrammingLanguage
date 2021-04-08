@@ -24,6 +24,7 @@ impl Eq for TokenTypes {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Keywords {
     Var,
+    Class,
     Const,
     If,
     Else,
@@ -70,6 +71,7 @@ impl fmt::Display for Keywords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Keywords::Var => write!(f, "Variable declaration"),
+            Keywords::Class => write!(f, "Class declaration"),
             Keywords::Const => write!(f, "Constant declaration"),
             Keywords::If => write!(f, "If statement"),
             Keywords::Else => write!(f, "Else statement"),

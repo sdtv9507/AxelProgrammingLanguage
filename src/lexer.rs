@@ -196,6 +196,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Var));
                         }
 
+                        "class" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Class));
+                        }
+
                         "const" => {
                             token_vector
                                 .push(tokens::TokenTypes::Keywords(tokens::Keywords::Const));

@@ -318,9 +318,7 @@ impl Parser {
                     }
                     tokens::TokenTypes::CompoundOperator(t) => {
                         self.advance_tokens();
-                        //self.advance_tokens();
                         let rt = self.parse_loop_expressions()?;
-                        //self.advance_tokens();
                         let compound_op = Expression::CompoundOperation {
                             identifier: name.clone(),
                             operator: tokens::TokenTypes::CompoundOperator(t),
@@ -498,21 +496,6 @@ impl Parser {
                     }
                     tokens::TokenTypes::Operator('(') => {
                         return self.parse_call();
-                    }
-                    tokens::TokenTypes::CompoundOperator(t) => {
-                        self.advance_tokens();
-                        //self.advance_tokens();
-                        let rt = self.parse_loop_expressions()?;
-                        //self.advance_tokens();
-                        let compound_op = Expression::CompoundOperation {
-                            identifier: name.clone(),
-                            operator: tokens::TokenTypes::CompoundOperator(t),
-                            right: Box::from(rt),
-                        };
-                        return Ok(Expression::VarChange {
-                            identifier: name.clone(),
-                            right: Box::from(compound_op),
-                        });
                     }
                     _ => return Ok(Expression::IdentifierLit { name }),
                 }
