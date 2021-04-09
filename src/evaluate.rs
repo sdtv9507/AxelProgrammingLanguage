@@ -343,6 +343,24 @@ impl Evaluator {
             },
             (Objects::String(s), Objects::String(t)) => match operator {
                 tokens::TokenTypes::Operator('+') => return Ok(Objects::String(s + &t)),
+                tokens::TokenTypes::Compare(tokens::Comparison::Equal) => {
+                    return Ok(Objects::Boolean(s.len() == t.len()));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::NotEqual) => {
+                    return Ok(Objects::Boolean(s.len() != t.len()));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::Less) => {
+                    return Ok(Objects::Boolean(s.len() < t.len()));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::LessE) => {
+                    return Ok(Objects::Boolean(s.len() <= t.len()));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::Greater) => {
+                    return Ok(Objects::Boolean(s.len() > t.len()));
+                }
+                tokens::TokenTypes::Compare(tokens::Comparison::GreaterE) => {
+                    return Ok(Objects::Boolean(s.len() >= t.len()));
+                }
                 _ => return Err("unknown operator"),
             },
             _ => return Err("operand type mismatch"),
