@@ -770,9 +770,6 @@ impl Parser {
         }
         loop {
             self.advance_tokens();
-            println!("delimiter {}", delimiter);
-            println!("left {}", left_op);
-            println!("token {}", self.token_vector[self.current_token]);
             let result_op = self.infix_expression_parser(precedence, left_op);
             match result_op {
                 Ok(v) => left_op = v,
