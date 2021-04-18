@@ -183,7 +183,11 @@ impl Evaluator {
                 }
                 return Ok(Objects::Hash(hash));
             }
-            parser::Expression::CompoundOperation { identifier, operator, right} => {
+            parser::Expression::CompoundOperation {
+                identifier,
+                operator,
+                right,
+            } => {
                 let val = self.environment.search(identifier.clone());
                 let id_value;
                 match val {
@@ -194,7 +198,8 @@ impl Evaluator {
                 match operator {
                     tokens::TokenTypes::CompoundOperator('+') => {
                         let operator = tokens::TokenTypes::Operator('+');
-                        let eval_expression = self.eval_infix_expression(operator, id_value, right_obj);
+                        let eval_expression =
+                            self.eval_infix_expression(operator, id_value, right_obj);
                         match eval_expression {
                             Ok(s) => {
                                 return Ok(s);
@@ -213,15 +218,43 @@ impl Evaluator {
                         self.environment.remove(identifier.clone());
                         self.environment.add(identifier, right_obj.clone());
                         return Ok(right_obj);
-                    },
+                    }
                     None => return Err("identifier not found"),
                 }
             }
-            _ => return Ok(Objects::Boolean(true)),
+            parser::Expression::WhileExpr { condition, body } => {
+                let mut obj_condition;
+                loop {
+                    obj_condition = self.eval_expression(*condition.clone())?;
+                    match obj_condition {
+                        Objects::Boolean(true) => {
+                            for statement in *body.clone() {
+                                let evaluated_statement = Some(self.return_if_condition(statement.clone()));
+                                match statement {
+                                    parser::Statement::ReturnStatement { value: _ } => {
+                                        match evaluated_statement {
+                                            Some(s) => return Ok(s),
+                                            None => return Err("error evaluating if expressions"),
+                                        }
+                                    }
+                                    _ => continue,
+                                }
+                            }
+                        }
+                        Objects::Boolean(false) => break,
+                        _ => return Err("evaluating while expression condition"),
+                    }
+                }
+                return Ok(obj_condition);
+            }
         }
     }
 
-    fn eval_index_expression<'a>(&mut self, left: Objects, right: Objects) -> Result<Objects, &'a str> {
+    fn eval_index_expression<'a>(
+        &mut self,
+        left: Objects,
+        right: Objects,
+    ) -> Result<Objects, &'a str> {
         match (left, right) {
             (Objects::Array(s), Objects::Integer(t)) => {
                 return Ok(s[t as usize].clone());
