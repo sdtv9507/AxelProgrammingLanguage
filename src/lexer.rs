@@ -192,6 +192,10 @@ fn read_token(text_vec: &Vec<char>) -> Vec<tokens::TokenTypes> {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Else));
                         }
 
+                        "while" => {
+                            token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::While));
+                        }
+
                         "var" => {
                             token_vector.push(tokens::TokenTypes::Keywords(tokens::Keywords::Var));
                         }
