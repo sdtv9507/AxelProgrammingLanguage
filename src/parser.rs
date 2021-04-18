@@ -90,6 +90,11 @@ pub enum Expression {
         other: Option<Box<Vec<Statement>>>,
     },
 
+    WhileExpr {
+        condition: Box<Expression>,
+        body: Box<Vec<Statement>>,
+    },
+
     FunctionExpr {
         identifier: String,
         parameters: Vec<String>,
@@ -154,6 +159,10 @@ impl fmt::Display for Expression {
                 other: _,
             } => write!(f, "If Expression: condition: {0}", condition),
 
+            Expression::WhileExpr {
+                condition,
+                body: _,
+            } => write!(f, "While Expression: condition: {}", condition),
             Expression::FunctionExpr {
                 identifier,
                 parameters: _,
@@ -273,6 +282,14 @@ impl Parser {
             tokens::TokenTypes::Keywords(tokens::Keywords::If) => {
                 let if_expression = self.parse_if();
                 match if_expression {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(e),
+                }
+            }
+
+            tokens::TokenTypes::Keywords(tokens::Keywords::While) => {
+                let while_expression = self.parse_while();
+                match while_expression {
                     Ok(s) => return Ok(s),
                     Err(e) => return Err(e),
                 }
@@ -462,6 +479,45 @@ impl Parser {
             condition: condition,
             then: consequence,
             other: then,
+        })
+    }
+
+    fn parse_while<'a>(&mut self) -> Result<Expression, &'a str> {
+        self.advance_tokens();
+        if self.match_current_operator('(') == false {
+            return Err("Error, expected (");
+        }
+        self.advance_tokens();
+
+        let condition_result = self.expression_parser(&tokens::TokenTypes::Operator(')'));
+        let condition;
+        match condition_result {
+            Ok(v) => condition = Box::new(v),
+            Err(e) => return Err(e),
+        }
+
+        if self.match_current_operator(')') == false {
+            return Err("Error, expected )");
+        }
+
+        self.advance_tokens();
+
+        if self.match_current_delim('{') == false {
+            return Err("Error, expected {");
+        }
+
+        self.advance_tokens();
+
+        let body = Box::new(self.parse_statement(&tokens::TokenTypes::Delim('}'))?);
+
+        self.advance_tokens();
+        if self.match_current_delim('}') == false {
+            return Err("Error, expected }");
+        }
+
+        Ok(Expression::WhileExpr {
+            condition,
+            body,
         })
     }
 

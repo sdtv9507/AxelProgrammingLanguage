@@ -217,6 +217,7 @@ impl Evaluator {
                     None => return Err("identifier not found"),
                 }
             }
+            _ => return Ok(Objects::Boolean(true)),
         }
     }
 
